@@ -1,41 +1,29 @@
 [
   {
-    "id": "pythonListComprehension",
+    "Article": "python_list_comprehension",
     "Name": "Mastering Python List Comprehensions",
+    "Desc": "",
+    "Url": "python_list_comprehension.json",
     "Date": "14-05-2024",
-    "Url": "https://raw.githubusercontent.com/MainRoute-Core/blog/main/blogs/python_list_comprehension.json",
-    "Tags": [
-      "Python",
-      "Programming",
-      "Tips",
-      "CleanCode"
-    ],
+    "Cat": [],
     "Status": "New"
   },
   {
-    "id": "runPythonServer",
+    "Article": "run_python_server",
     "Name": "Run Python Server",
+    "Desc": "",
+    "Url": "run_python_server.json",
     "Date": "12-05-2024",
-    "Url": "https://raw.githubusercontent.com/MainRoute-Core/blog/main/blogs/run_python_server.json",
-    "Tags": [
-      "Python",
-      "Web",
-      "DevOps",
-      "Server"
-    ],
+    "Cat": [],
     "Status": "Pub"
   },
   {
-    "id": "webScrapingPython",
+    "Article": "web_scraping_python",
     "Name": "Web Scraping with Python",
+    "Desc": "",
+    "Url": "web_scraping_python.json",
     "Date": "16-05-2024",
-    "Url": "https://raw.githubusercontent.com/MainRoute-Core/blog/main/blogs/web_scraping_python.json",
-    "Tags": [
-      "Python",
-      "DataScience",
-      "Automation",
-      "BeautifulSoup"
-    ],
+    "Cat": [],
     "Status": "Un"
   }
 ]
