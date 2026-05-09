@@ -3,8 +3,8 @@ name: Build Blogs Metadata JSON
 on:
   push:
     paths:
-      - "blogs/**/*.json" # Triggers when json files in 'data' folder change
-  workflow_dispatch:     # Allows manual trigger from Actions tab
+      - "blogs/**/*.json" # Triggers when json files in 'blogs' folder change
+  workflow_dispatch:      # Allows manual trigger from Actions tab
 
 permissions:
   contents: write
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required for git history if needed
+          fetch-depth: 0 # Required for git history to determine the date if needed
 
       - name: Generate JSON metadata
         run: |
@@ -27,13 +27,11 @@ jobs:
           const { execSync } = require("child_process");
 
           // CONFIGURATION
-          const ROOT = "blogs"; // Change this if your jsons are in a different folder
+          const ROOT = "blogs"; // Target Directory
           const OUT = "blogs.json";
-          const REPO = process.env.GITHUB_REPOSITORY; // e.g., "owner/repo"
-          const BRANCH = process.env.GITHUB_REF_NAME || "main";
 
           if (!fs.existsSync(ROOT)) {
-            console.error(`Error: Directory "${ROOT}" not found. Please create it or change the ROOT constant.`);
+            console.error(`Error: Directory "${ROOT}" not found.`);
             process.exit(1);
           }
 
@@ -43,13 +41,6 @@ jobs:
               const p = path.join(dir, f);
               return fs.statSync(p).isDirectory() ? walk(p) : p;
             }).filter(f => f.toLowerCase().endsWith('.json'));
-          }
-
-          // Helper to convert "Run_Python_Server" -> "runPythonServer"
-          function toCamelCase(str) {
-            return str
-              .replace(/[-_ ]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
-              .replace(/^(.)/, c => c.toLowerCase());
           }
 
           // Helper to get Git Date if 'Date' property is missing in JSON
@@ -72,22 +63,20 @@ jobs:
               const content = fs.readFileSync(file, "utf8");
               const json = JSON.parse(content);
               
-              const baseName = path.basename(file, path.extname(file)); // "Run_Python_Server"
-              const safePath = file.replace(/\\/g, "/"); // normalize slashes
-              const rawUrl = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${safePath}`;
+              const fileName = path.basename(file); // Original Name of the JSON file
+              const baseName = path.basename(file, path.extname(file)); // File name without extension
 
-              // Determine tags (handles 'Tag', 'tags', or 'Tags' keys)
-              let tagsArray =[];
-              if (Array.isArray(json.Tag)) tagsArray = json.Tag;
-              else if (Array.isArray(json.Tags)) tagsArray = json.Tags;
+              // Safely extract categories
+              const categoriesArray = Array.isArray(json.Categories) ? json.Categories :[];
 
-              // Build Output Structure
+              // Build Output Structure (One line per attribute as requested)
               blogsData.push({
-                id: toCamelCase(baseName),
+                Article: json.Id || baseName,
                 Name: json.Title || baseName,
+                Desc: json.Desc || "",
+                Url: fileName,
                 Date: json.Date || getGitDate(file),
-                Url: rawUrl,
-                Tags: tagsArray,
+                Cat: categoriesArray,
                 Status: json.Status || "Un"
               });
 
@@ -96,7 +85,7 @@ jobs:
             }
           }
 
-          // Sort descending by Date (optional but helpful for blogs)
+          // Sort descending by Date
           blogsData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
 
           const finalContent = JSON.stringify(blogsData, null, 2);
