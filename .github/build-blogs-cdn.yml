@@ -1,0 +1,129 @@
+name: Build Blogs Metadata JSON
+
+on:
+  push:
+    paths:
+      - "blogs/**/*.json" # Triggers when json files in 'data' folder change
+  workflow_dispatch:     # Allows manual trigger from Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  build-metadata:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for git history if needed
+
+      - name: Generate JSON metadata
+        run: |
+          node <<'EOF'
+          const fs = require("fs");
+          const path = require("path");
+          const { execSync } = require("child_process");
+
+          // CONFIGURATION
+          const ROOT = "blogs"; // Change this if your jsons are in a different folder
+          const OUT = "blogs.json";
+          const REPO = process.env.GITHUB_REPOSITORY; // e.g., "owner/repo"
+          const BRANCH = process.env.GITHUB_REF_NAME || "main";
+
+          if (!fs.existsSync(ROOT)) {
+            console.error(`Error: Directory "${ROOT}" not found. Please create it or change the ROOT constant.`);
+            process.exit(1);
+          }
+
+          // Recursive directory walk
+          function walk(dir) {
+            return fs.readdirSync(dir).flatMap(f => {
+              const p = path.join(dir, f);
+              return fs.statSync(p).isDirectory() ? walk(p) : p;
+            }).filter(f => f.toLowerCase().endsWith('.json'));
+          }
+
+          // Helper to convert "Run_Python_Server" -> "runPythonServer"
+          function toCamelCase(str) {
+            return str
+              .replace(/[-_ ]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
+              .replace(/^(.)/, c => c.toLowerCase());
+          }
+
+          // Helper to get Git Date if 'Date' property is missing in JSON
+          function getGitDate(file) {
+            try {
+              const res = execSync(`git log -1 --format=%aI -- "${file}"`).toString().trim();
+              return res ? res.slice(0, 10) : new Date().toISOString().slice(0, 10);
+            } catch {
+              return new Date().toISOString().slice(0, 10);
+            }
+          }
+
+          const files = walk(ROOT);
+          const blogsData =[];
+
+          console.log(`Processing ${files.length} JSON files...`);
+
+          for (const file of files) {
+            try {
+              const content = fs.readFileSync(file, "utf8");
+              const json = JSON.parse(content);
+              
+              const baseName = path.basename(file, path.extname(file)); // "Run_Python_Server"
+              const safePath = file.replace(/\\/g, "/"); // normalize slashes
+              const rawUrl = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${safePath}`;
+
+              // Determine tags (handles 'Tag', 'tags', or 'Tags' keys)
+              let tagsArray =[];
+              if (Array.isArray(json.Tag)) tagsArray = json.Tag;
+              else if (Array.isArray(json.Tags)) tagsArray = json.Tags;
+
+              // Build Output Structure
+              blogsData.push({
+                id: toCamelCase(baseName),
+                Name: json.Title || baseName,
+                Date: json.Date || getGitDate(file),
+                Url: rawUrl,
+                Tags: tagsArray,
+                Status: json.Status || "Un"
+              });
+
+            } catch (err) {
+              console.error(`Skipping invalid JSON file: ${file} - ${err.message}`);
+            }
+          }
+
+          // Sort descending by Date (optional but helpful for blogs)
+          blogsData.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+          const finalContent = JSON.stringify(blogsData, null, 2);
+          fs.writeFileSync(OUT, finalContent);
+          
+          console.log(`Successfully generated ${OUT} with ${blogsData.length} entries.`);
+          EOF
+
+      - name: Deploy to Output Branch
+        run: |
+          cp blogs.json /tmp/blogs.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check and switch to output branch
+          git fetch origin
+          if git show-ref --verify --quiet refs/remotes/origin/output; then
+            git checkout -f output
+            git reset --hard origin/output
+          else
+            git checkout --orphan output
+          fi
+          
+          # Remove all previous files in branch and copy over the new JSON
+          git rm -rf . || true
+          cp /tmp/blogs.json blogs.json
+          
+          git add blogs.json
+          git commit -m "chore: update blogs JSON metadata [skip ci]" || echo "No changes to commit"
+          git push origin output --force
