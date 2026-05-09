@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#181c24"/>
   
-  <!-- TinyMCE (Using CDNJS to avoid API key warnings) -->
+  <!-- TinyMCE -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js"></script>
   
   <!-- Google Icons & Font -->
@@ -42,6 +42,15 @@
     .meta-group input:focus, .meta-group select:focus { border-color: var(--primary); }
     .full-width { flex-basis: 100%; }
 
+    /* --- Custom Checkbox Dropdown --- */
+    .multi-select { position: relative; }
+    .select-box { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--input); color: var(--fg); font-size: 0.95rem; cursor: pointer; user-select: none; }
+    .select-box:hover { border-color: var(--primary); }
+    .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: var(--input); border: 1px solid var(--border); border-radius: 6px; z-index: 10; max-height: 180px; overflow-y: auto; display: none; box-shadow: var(--shadow); margin-top: 5px; }
+    .dropdown-list.show { display: block; }
+    .dropdown-list label { display: flex; align-items: center; padding: 8px 12px; gap: 8px; cursor: pointer; font-size: 0.9rem; font-weight: normal; margin: 0; opacity: 1; }
+    .dropdown-list label:hover { background: var(--primary-fade); }
+
     /* --- Tabs --- */
     .tabs { display: flex; background: var(--bar); border-bottom: 1px solid var(--border); padding: 0 10px; align-items: center; }
     .tab-btn { 
@@ -62,7 +71,7 @@
     /* JSON Pane */
     #jsonPane { padding: 20px; font-family: monospace; white-space: pre-wrap; font-size: 0.9rem; overflow-x: auto; color: var(--fg); }
 
-    /* --- Preview Render Styles (Your specific structure) --- */
+    /* --- Preview Render Styles --- */
     #previewPane { padding: 40px 20px; background: var(--bg); display: none; justify-content: center; overflow-y: auto; max-height: 70vh; }
     #previewPane.active { display: flex; }
     
@@ -76,6 +85,7 @@
     .clog-meta-item span:first-child { font-weight: 600; margin-right: 5px; }
     .clog-tags { display: flex; gap: 8px; flex-wrap: wrap; }
     .clog-tags span { background: var(--primary-fade); color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .clog-tags .cat-badge { background: #334155; color: #fff; }
     
     .clog-body { font-size: 1.1rem; line-height: 1.8; color: var(--fg); }
     .clog-body p { margin-bottom: 1.5em; }
@@ -95,19 +105,32 @@
       <input type="text" id="title" placeholder="Mastering Python...">
     </div>
     <div class="meta-group">
-      <label>Slug</label>
-      <input type="text" id="slug" placeholder="mastering-python">
+      <label>Blog ID (Auto PascalCase)</label>
+      <input type="text" id="blog-id" placeholder="MasteringPython">
     </div>
+    
+    <!-- Updated Categories Dropdown with Checkboxes -->
     <div class="meta-group">
-      <label>Tags (comma separated)</label>
+      <label>Categories</label>
+      <div class="multi-select" id="categories-dropdown">
+        <div class="select-box" id="cat-select-box" onclick="toggleDropdown('categories-list')">Select Categories...</div>
+        <div class="dropdown-list" id="categories-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <div class="meta-group">
+      <label>Tags (Sub-cats, comma separated)</label>
       <input type="text" id="tags" placeholder="Python, Code, Web">
     </div>
+
     <div class="meta-group" style="flex: 0.5;">
       <label>Status</label>
       <select id="status">
-        <option value="New">New</option>
-        <option value="Pub">Published</option>
-        <option value="Un">Unpublished</option>
+        <option value="Un">Unpublished (Un)</option>
+        <option value="Pub">Published (Pub)</option>
+        <option value="Not">Not Ready (Not)</option>
       </select>
     </div>
     <div class="meta-group">
@@ -119,7 +142,7 @@
       <input type="url" id="img" placeholder="https://images.unsplash.com/...">
     </div>
     <div class="meta-group full-width">
-      <label>Short Description</label>
+      <label>Short Description (Desc)</label>
       <input type="text" id="desc" placeholder="A brief summary of the post...">
     </div>
   </div>
@@ -143,7 +166,7 @@
     <textarea id="tinymce-editor"></textarea>
   </div>
 
-  <!-- 2. Preview Pane (Using your exact requested structure) -->
+  <!-- 2. Preview Pane -->
   <div id="previewPane" class="pane">
     <article class="clog-container">
       <img src="" alt="Banner" id="prev-img" class="banner-image" onerror="this.src='https://via.placeholder.com/800x400?text=No+Image+Provided'"/>
@@ -178,7 +201,7 @@
   // State Management
   const inputs = {
     title: document.getElementById('title'),
-    slug: document.getElementById('slug'),
+    id: document.getElementById('blog-id'),
     tags: document.getElementById('tags'),
     status: document.getElementById('status'),
     author: document.getElementById('author'),
@@ -186,7 +209,51 @@
     desc: document.getElementById('desc')
   };
 
-  // 1. Initialize TinyMCE Editor
+  // --- Category Checkbox Logic ---
+  const AVAILABLE_CATEGORIES =["Technology", "Programming", "Web Development", "Artificial Intelligence", "Lifestyle", "Business", "Design", "Tutorials", "Finance"];
+  const categoryList = document.getElementById('categories-list');
+  const catSelectBox = document.getElementById('cat-select-box');
+
+  // Populate categories list
+  AVAILABLE_CATEGORIES.forEach(cat => {
+    const lbl = document.createElement('label');
+    lbl.innerHTML = `<input type="checkbox" value="${cat}" class="cat-checkbox"> ${cat}`;
+    categoryList.appendChild(lbl);
+  });
+
+  function toggleDropdown(id) {
+    document.getElementById(id).classList.toggle('show');
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.multi-select')) {
+      document.getElementById('categories-list').classList.remove('show');
+    }
+  });
+
+  // Handle Category check changes
+  document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('cat-checkbox')) {
+      updateCategoryText();
+      saveDraft();
+    }
+  });
+
+  function updateCategoryText() {
+    const checked = getSelectedCategories();
+    if (checked.length === 0) {
+      catSelectBox.innerText = "Select Categories...";
+    } else {
+      catSelectBox.innerText = checked.length > 2 ? `${checked.length} selected` : checked.join(', ');
+    }
+  }
+
+  function getSelectedCategories() {
+    return Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => cb.value);
+  }
+
+  // --- 1. Initialize TinyMCE Editor ---
   tinymce.init({
     selector: '#tinymce-editor',
     height: 600,
@@ -215,23 +282,23 @@
     }
   });
 
-  // 2. Generate JSON Object
+  // --- 2. Generate JSON Object (Matches exactly requested keys) ---
   function getOutputJSON() {
     return {
       "Title": inputs.title.value.trim(),
-      "Slug": inputs.slug.value.trim(),
-      "Date": getFormattedDate(),
-      "Status": inputs.status.value,
+      "Desc": inputs.desc.value.trim(),
       "Author": inputs.author.value.trim() || "Admin",
+      "Id": inputs.id.value.trim(),
       "Tags": inputs.tags.value.split(',').map(t => t.trim()).filter(t => t),
+      "Categories": getSelectedCategories(),
+      "Date": getFormattedDate(),
       "Img": inputs.img.value.trim(),
-      "Description": inputs.desc.value.trim(),
-      // Grab RAW Valid HTML from TinyMCE
+      "Status": inputs.status.value, // Will be "Un", "Pub", or "Not"
       "Data": tinymce.get('tinymce-editor') ? tinymce.get('tinymce-editor').getContent() : ""
     };
   }
 
-  // 3. Update Preview Pane (Injects into your requested HTML template)
+  // --- 3. Update Preview Pane ---
   function updatePreview() {
     const data = getOutputJSON();
     
@@ -240,18 +307,21 @@
     document.getElementById('prev-date').innerText = data.Date;
     document.getElementById('prev-author').innerText = data.Author;
     
-    document.getElementById('prev-tags').innerHTML = data.Tags.map(t => `<span>${t}</span>`).join('');
+    // Mix Categories and Tags visually in preview
+    const categoriesHtml = data.Categories.map(c => `<span class="cat-badge">${c}</span>`).join('');
+    const tagsHtml = data.Tags.map(t => `<span>#${t}</span>`).join('');
+    document.getElementById('prev-tags').innerHTML = categoriesHtml + tagsHtml;
     
-    // Inject Editor HTML Directly into the body container
+    // Inject Editor HTML Directly
     document.getElementById('prev-body').innerHTML = data.Data || "<p style='color:gray'>Content goes here...</p>";
   }
 
-  // 4. Update JSON display
+  // --- 4. Update JSON display ---
   function updateJSONPane() {
     document.getElementById('jsonPane').innerText = JSON.stringify(getOutputJSON(), null, 2);
   }
 
-  // 5. Tab Switching Logic
+  // --- 5. Tab Switching Logic ---
   function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
@@ -263,7 +333,7 @@
     if (tab === 'json') updateJSONPane();
   }
 
-  // 6. Local Storage / AutoSave
+  // --- 6. Local Storage / AutoSave ---
   function saveDraft() {
     const draft = getOutputJSON();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
@@ -275,13 +345,20 @@
       if (!saved) return;
 
       inputs.title.value = saved.Title || '';
-      inputs.slug.value = saved.Slug || '';
+      inputs.id.value = saved.Id || '';
       inputs.tags.value = (saved.Tags ||[]).join(', ');
-      inputs.status.value = saved.Status || 'New';
+      inputs.status.value = saved.Status || 'Un';
       inputs.author.value = saved.Author || '';
       inputs.img.value = saved.Img || '';
-      inputs.desc.value = saved.Description || '';
+      inputs.desc.value = saved.Desc || '';
       
+      // Load selected categories
+      const savedCats = saved.Categories ||[];
+      document.querySelectorAll('.cat-checkbox').forEach(cb => {
+        cb.checked = savedCats.includes(cb.value);
+      });
+      updateCategoryText();
+
       if (saved.Data && tinymce.get('tinymce-editor')) {
         tinymce.get('tinymce-editor').setContent(saved.Data);
       }
@@ -293,15 +370,16 @@
     input.addEventListener('input', saveDraft);
   });
 
-  // Auto-generate Slug from Title
+  // Auto-generate ID from Title (PascalCase format logic)
   inputs.title.addEventListener('blur', function() {
-    if (!inputs.slug.value) {
-      inputs.slug.value = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    if (!inputs.id.value && this.value) {
+      // Remove symbols and convert "My First Blog" to "MyFirstBlog"
+      inputs.id.value = this.value.match(/[a-zA-Z0-9]+/g)?.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('') || '';
       saveDraft();
     }
   });
 
-  // Helpers
+  // --- Helpers ---
   function getFormattedDate() {
     const d = new Date();
     const pad = (n) => (n < 10 ? '0' : '') + n;
@@ -318,7 +396,11 @@
   function clearAll() {
     if (confirm("Are you sure you want to clear all data?")) {
       Object.values(inputs).forEach(input => input.value = '');
-      inputs.status.value = 'New';
+      inputs.status.value = 'Un';
+      
+      document.querySelectorAll('.cat-checkbox').forEach(cb => cb.checked = false);
+      updateCategoryText();
+
       if (tinymce.get('tinymce-editor')) tinymce.get('tinymce-editor').setContent('');
       localStorage.removeItem(STORAGE_KEY);
       switchTab('editor');
