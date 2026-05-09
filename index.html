@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JSON Blog Builder</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#181c24"/>
+  <!-- Quill (Visual Editor) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
+  <!-- CodeMirror (Source Editor) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+  <!-- PrismJS for code syntax highlight -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <!-- Google Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons">
+  <style>
+:root {
+  --bg: #fafbfc;
+  --fg: #121417;
+  --bar: #eff2f6;
+  --toolbar: #edf0f3;
+  --input: #fff;
+  --border: #e1e6ea;
+  --primary: #2262ea;
+  --primary-fade: #e3edfa;
+  --radius: 10px;
+  --shadow: 0 2px 16px rgba(30,40,90,.07);
+  --danger: #f16360;
+  --success: #52ecb6;
+  --warn: #ffe9aa;
+  --note: #e2f3fd;
+}[data-theme="dark"] {
+  --bg: #171b22;
+  --fg: #f3f5fa;
+  --bar: #22252b;
+  --toolbar: #23263b;
+  --input: #21222e;
+  --border: #31343b;
+  --primary: #6cabff;
+  --primary-fade: #213460;
+  --radius: 11px;
+  --shadow: 0 2px 12px rgba(8,12,42,.13);
+  --danger: #f47f7a;
+  --success: #71ebce;
+  --warn: #544e36;
+  --note: #1e3140;
+}
+
+html,body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  margin:0; padding:0;
+  min-height: 100vh;
+  font-size: 17px;
+  scroll-behavior: smooth;
+}
+body { min-height: 100svh; }
+::-webkit-scrollbar { width: 8px; background: var(--bar);}
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 9px; }
+
+#container {
+  max-width: 980px;
+  margin: 0 auto;
+  box-shadow: var(--shadow);
+  background: var(--bg);
+  min-height: 100vh;
+  border-radius: var(--radius);
+  display: flex; flex-direction: column;
+}
+
+.upper-area {
+  background: var(--bar);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: var(--shadow);
+  z-index: 12;
+  margin-bottom: 0;
+}
+.blog-input-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 23px;
+  padding: 21px 15px 10px 23px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--border);
+}
+.blog-input-bar label {
+  display: flex;
+  flex-direction: column;
+  font-size: .93em;
+  color: var(--fg);
+  font-weight: 500;
+  min-width: 100px;
+}
+.blog-input-bar input, .blog-input-bar textarea, .blog-input-bar select {
+  background: var(--input);
+  border: 1px solid var(--border);
+  padding: 7px 11px;
+  font-size: 1em;
+  border-radius: 7px;
+  margin: 0;
+  margin-top: 4px;
+  font-family: inherit;
+  color: var(--fg);
+  width: 160px;
+  max-width: 99vw;
+  outline: none;
+  transition: border-color .13s;
+}
+.blog-input-bar textarea { width:210px; min-width:120px; min-height:2.1em; }
+.blog-input-bar input:focus, .blog-input-bar textarea:focus, .blog-input-bar select:focus {
+  border-color: var(--primary);
+}
+.blog-input-bar .desc { width:220px;}
+.blog-input-bar .status {width: 99px;}
+.blog-input-bar .tags {width:130px;}
+
+#wordCounts { color: #969cb0; font-size:.98em; margin-left:5px; font-weight:400; }
+
+.theme-toggle {
+  margin-left: auto;
+  min-width: 41px;
+  background: var(--input);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  border-radius: 33px;
+  cursor: pointer;
+  height:38px; font-size:1.07em;
+  display:flex; align-items:center;justify-content:center;
+  transition:.12s background;
+}
+.theme-toggle:hover { background:var(--primary-fade); }
+.theme-toggle .material-icons { font-size:1.5em; }
+
+.toolbar-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 10px 0 17px;
+  background: var(--toolbar);
+  border-bottom: 1.5px solid var(--border);
+  position: sticky;
+  top: 0; z-index: 190;
+}
+.tool-btn {
+  background: var(--input);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: .99em;
+  cursor: pointer;
+  transition: background .14s, color .18s;
+  user-select: none;
+  outline:none;
+  display: flex; align-items: center; gap: 2px;
+  min-width:0;
+  height:33px;
+}
+.tool-btn:hover, .tool-btn.active, .tool-btn:focus {
+  background: var(--primary-fade);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.lower-area {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-radius: 0 0 var(--radius) var(--radius);
+  min-height: 66vh;
+}
+
+.tabs {
+  background: var(--bar);
+  display: flex;
+  border-bottom: 1.5px solid var(--border);
+  gap: 8px;
+  padding: 0 11px 0 15px;
+  font-size:1em;
+  min-height: 42px;
+  align-items:center;
+  position: relative;
+}
+.tab-btn {
+  background: none;
+  color: var(--fg);
+  border: none;
+  min-width:54px;
+  padding: 13px 16px 7px 16px;
+  margin-right: 1px;
+  cursor: pointer;
+  border-bottom: 2.7px solid transparent;
+  font-size: 1.01em;
+  font-weight: 500;
+  transition: border .18s, color .18s;
+  outline:none;
+}
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom: 2.5px solid var(--primary)
+}
+
+.copy-btn, .download-btn, .clear-btn {
+  background: var(--input);
+  border-radius: 7px;
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 7px 13px;
+  margin: 7px 5px 7px 0;
+  cursor: pointer;
+  font-size: .97em;
+  font-weight: 500;
+  transition: background .13s;
+}
+.copy-btn:hover, .download-btn:hover, .clear-btn:hover { background: var(--primary-fade);}
+.clear-btn { color: var(--danger);}
+.copy-btn:active {background: var(--primary-fade);}
+
+.responsive-main {
+  display: flex;
+  flex: 1 1 auto;
+  height: 100%;
+  gap:0;
+}
+
+.editor-pane, .preview-pane, .json-pane {
+  flex: 1 1 0;
+  max-width: 100%;
+  min-width: 0;
+  background: var(--input);
+  padding: 0;
+  display: none;
+  flex-direction: column;
+  border-radius: 0;
+}
+
+.editor-pane.active,
+.preview-pane.active,
+.json-pane.active { display: flex;}
+
+#quillArea, #cmArea {
+  width: 100%;
+  min-width: 0;
+  min-height: 253px;
+  max-height: 60svh;
+  font-size:1.13em;
+}
+
+.ql-toolbar { border-radius: 8px 8px 0 0; background:var(--toolbar);}
+.ql-container { border-radius: 0 0 8px 8px; background:var(--input); }
+.ql-editor { min-height:162px; font-size:1.17em; }
+
+.CodeMirror {
+  height:42vh; min-height:210px; font-size:1.17em;
+  background:var(--input); color:var(--fg);
+  border-radius:8px; border:1px solid var(--border);
+  font-family:'JetBrains Mono','Fira Mono',monospace;
+}
+
+.preview-pane, .json-pane {
+  background: var(--input);
+  border-radius: 0 0 11px 11px;
+  max-height:64vh;
+  min-height:30vh;
+  padding: 25px 18px 0 20px;
+  font-size: 1.09em;
+  line-height:1.7;
+  overflow:auto;
+}
+.json-pane { white-space: pre-wrap; padding-bottom: 15px;}
+
+.preview-pane blockquote {
+  border-left: 3.7px solid var(--primary);
+  padding-left: 14px;
+  color: #5a5f7f;
+  margin: 12px 0;
+}
+.preview-pane .note    { background: var(--note);     border-left: 4px solid #44aaff; padding: 10px 14px; border-radius: 8px; margin:8px 0;}
+.preview-pane .warn    { background: var(--warn);     border-left: 4px solid #dbc15a; padding: 10px 14px; border-radius: 8px; margin:8px 0;}
+.preview-pane .success { background: var(--success);  border-left: 4px solid #5ae591; padding: 10px 14px; border-radius: 8px; margin:8px 0;}
+
+.preview-pane code, .preview-pane pre {
+  border-radius:7px;
+  background: #232736;
+  color: #e6e6e6;
+  padding: 3px 11px;
+}
+
+.preview-pane hr { border:0; border-top:2px dashed #aab7c4; margin:19px 0;}
+
+.preview-pane table { border-collapse:collapse; margin: 15px 0;}
+.preview-pane td, .preview-pane th { border:1px solid var(--border); padding:7px 20px;}
+
+.hidden { display:none !important; }
+
+@media (max-width:900px){
+  #container { box-shadow:none; border-radius:0; }
+}
+@media (max-width:799px) {
+  .responsive-main {
+    flex-direction: column;
+  }
+  .editor-pane, .preview-pane, .json-pane {
+    min-width: 0;
+    width:99vw;
+    min-height:120px;
+    border-radius: 0;
+    max-height:unset;
+  }
+  .tabs { padding-inline: 3vw;}
+  .blog-input-bar, .toolbar-bar { padding-inline: 3vw;}
+}
+@media (max-width:499px) {
+  .blog-input-bar {flex-direction:column;align-items:stretch;gap:4px;}
+  .blog-input-bar input,.blog-input-bar textarea,.blog-input-bar select {width:99%;}
+  .tabs{gap:2px;padding-inline:3vw;}
+  .preview-pane, .json-pane, .editor-pane { padding: 9px 3vw 0 3vw;}
+}
+  </style>
+</head>
+<body>
+<div id="container">
+  <div class="upper-area">
+    <form class="blog-input-bar" id="metaForm" autocomplete="off">
+      <label>Title
+        <input id="titleInput" type="text" placeholder="Blog Title" required autocomplete="off">
+      </label>
+      <label>Slug
+        <input id="slugInput" type="text" placeholder="blog-title" autocomplete="off">
+      </label>
+      <label>Tags
+        <input id="tagsInput" type="text" placeholder="news, json, blog" class="tags" autocomplete="off">
+      </label>
+      <label>Status
+        <select id="statusInput" class="status">
+          <option value="">-</option>
+          <option value="Pub">Published</option>
+          <option value="Un">Unpublished</option>
+        </select>
+      </label>
+      <label>Author
+        <input id="authorInput" type="text" placeholder="Author" autocomplete="off">
+      </label>
+      <label>Image
+        <input id="imgInput" type="url" placeholder="https://..." autocomplete="off">
+      </label>
+      <label>Description
+        <textarea id="descInput" maxlength="180" class="desc" placeholder="Short description"></textarea>
+      </label>
+      <span class="counts" id="wordCounts">&nbsp;</span>
+      <button type="button" title="Toggle theme" class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <span class="material-icons">dark_mode</span>
+      </button>
+    </form>
+    <div class="toolbar-bar" id="mainToolbar"></div>
+  </div>
+  <div class="lower-area">
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="visual" type="button">Visual</button>
+      <button class="tab-btn" data-tab="source" type="button">Source</button>
+      <button class="tab-btn" data-tab="preview" type="button">Preview</button>
+      <span style="flex:1"></span>
+      <button class="copy-btn"     id="copyJSON"   title="Copy JSON to clipboard">Copy JSON</button>
+      <button class="download-btn" id="downloadJSON" title="Download JSON">Download JSON</button>
+      <button class="clear-btn"    id="clearAll"   title="Clear blog fields and editor">Clear</button>
+    </div>
+    <div class="responsive-main" id="mainContent">
+      <div class="editor-pane active" id="visualPane"><div id="quillArea"></div></div>
+      <div class="editor-pane" id="sourcePane"><div id="cmArea"></div></div>
+      <div class="preview-pane" id="previewPane"></div>
+      <div class="json-pane hidden" id="jsonPane" style="white-space:pre-wrap;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PRISM -->
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+<!-- Quill.js -->
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<!-- CodeMirror -->
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchbrackets.min.js"></script>
+
+<!-- Core App -->
+<script>
+const customTags =[
+  {label:"H2",tag:"h2",shortcut:"Ctrl+Alt+2",hint:"Heading 2"},
+  {label:"H3",tag:"h3",shortcut:"Ctrl+Alt+3",hint:"Heading 3"},
+  {label:"H4",tag:"h4",shortcut:"",hint:"Heading 4"},
+  {label:"Bold",tag:"b",shortcut:"Ctrl+B",hint:"Bold"},
+  {label:"Italic",tag:"i",shortcut:"Ctrl+I",hint:"Italic"},
+  {label:"Underline",tag:"u",shortcut:"Ctrl+U",hint:"Underline"},
+  {label:"Strike",tag:"s",shortcut:"Ctrl+Shift+S",hint:"Strikethrough"},
+  {label:"Paragraph",tag:"p",shortcut:"",hint:"Paragraph"},
+  {label:"Code",tag:"code",shortcut:"Ctrl+Shift+C",hint:"Code Block"},
+  {label:"Inline code",tag:"ic",shortcut:"",hint:"Inline code"},
+  {label:"UL list",tag:"ul",shortcut:"Ctrl+Shift+8",hint:"Unordered list"},
+  {label:"OL list",tag:"ol",shortcut:"Ctrl+Shift+7",hint:"Ordered list"},
+  {label:"Link",tag:"a",shortcut:"Ctrl+K",hint:"Link"},
+  {label:"Image",tag:"img",shortcut:"",hint:"Image"},
+  {label:"Quote",tag:"quote",shortcut:"",hint:"Quote/Blockquote"},
+  {label:"Note",tag:"note",shortcut:"",hint:"Note"},
+  {label:"Warning",tag:"warn",shortcut:"",hint:"Warning"},
+  {label:"Success",tag:"success",shortcut:"",hint:"Success"},
+  {label:"Divider",tag:"hr",shortcut:"",hint:"Divider"},
+  {label:"Table",tag:"tbl",shortcut:"",hint:"Table"},
+];
+
+function getToolbarIcon(tag){
+  switch(tag){
+    case 'h2': return '<b style="font-size:1.09em;">H2</b>';
+    case 'h3': return '<b style="font-size:1.07em;">H3</b>';
+    case 'h4': return '<b style="font-size:1.01em;">H4</b>';
+    case 'b': return '<b>B</b>';
+    case 'i': return '<i>I</i>';
+    case 'u': return '<u>U</u>';
+    case 's': return '<s>S</s>';
+    case 'p': return '&para;';
+    case 'hr': return '<span class="material-icons" style="font-size:1.08em;">horizontal_rule</span>';
+    case 'code': return '<span class="material-icons">code</span>';
+    case 'ic': return '<span class="material-icons" style="font-size:1.15em;">short_text</span>';
+    case 'ul': return '<span class="material-icons">format_list_bulleted</span>';
+    case 'ol': return '<span class="material-icons">format_list_numbered</span>';
+    case 'a': return '<span class="material-icons">link</span>';
+    case 'img': return '<span class="material-icons">image</span>';
+    case 'quote': return '<span class="material-icons">format_quote</span>';
+    case 'note': return '<span class="material-icons">note_alt</span>';
+    case 'warn': return '<span class="material-icons" style="color:#edb726;">warning</span>';
+    case 'success': return '<span class="material-icons" style="color:#43e389;">check_circle</span>';
+    case 'tbl': return '<span class="material-icons">table_rows</span>';
+    default: return tag;
+  }
+}
+
+/** SAFE HTML ESCAPING AND CONVERSION UTILS */
+function escapeHtml(str) {
+  return (str||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+function unescapeHtml(str) {
+  return (str||'').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ');
+}
+
+// 1) Parses visually generated standard HTML to Custom Syntax
+function htmlToCustomSyntax(html) {
+  let txt = html || '';
+  txt = txt.replace(/&nbsp;/g, ' ');
+
+  // Inline tags 
+  txt = txt.replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, `\\b:$1:b\\`);
+  txt = txt.replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, `\\b:$1:b\\`);
+  txt = txt.replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, `\\i:$1:i\\`);
+  txt = txt.replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, `\\i:$1:i\\`);
+  txt = txt.replace(/<u[^>]*>([\s\S]*?)<\/u>/gi, `\\u:$1:u\\`);
+  txt = txt.replace(/<s[^>]*>([\s\S]*?)<\/s>/gi, `\\s:$1:s\\`);
+  txt = txt.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, `\\ic:$1:ic\\`);
+  txt = txt.replace(/<a\s+[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, `\\a=$1:$2:a\\`);
+  txt = txt.replace(/<img\s+[^>]*src="([^"]+)"[^>]*>/gi, `\\img=$1::img\\`);
+
+  // Block elements
+  txt = txt.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, function(_, code) {
+      return `\\code:\n${unescapeHtml(code)}\n:code\\\n\n`;
+  });
+  txt = txt.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, `\\h2:$1:h2\\\n\n`);
+  txt = txt.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, `\\h3:$1:h3\\\n\n`);
+  txt = txt.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, `\\h4:$1:h4\\\n\n`);
+  txt = txt.replace(/<ul[^>]*>([\s\S]*?)<\/ul>/gi, function(_, list) {
+      let items = list.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, `\\li:$1:li\\\n`);
+      return `\\ul:\n${items}:ul\\\n\n`;
+  });
+  txt = txt.replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, function(_, list) {
+      let items = list.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, `\\li:$1:li\\\n`);
+      return `\\ol:\n${items}:ol\\\n\n`;
+  });
+  txt = txt.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, `\\quote:$1:quote\\\n\n`);
+
+  // Parse paragraphs and intelligently filter out useless Quill noise
+  txt = txt.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, function(_, inner) {
+      let trimmed = inner.trim();
+      if (!trimmed || trimmed === '<br>') return ''; 
+
+      // If text consists ENTIRELY of a custom block syntax, strip the redundant wrapper
+      if (/^\\(note|warn|success|tbl|hr|img[=:]|code|ul|ol|quote|h[234])[\s\S]*?\\\s*$/i.test(trimmed) || trimmed === '\\hr\\') {
+          return trimmed + '\n\n';
+      }
+      // If it starts directly with one of those blocks, extract block to prevent bug
+      if (/^\\(note|warn|success|tbl|hr|img[=:]|code|ul|ol|quote|h[234])/i.test(trimmed)) {
+          return trimmed + '\n\n';
+      }
+      
+      return `\\p:${inner}:p\\\n\n`;
+  });
+
+  txt = txt.replace(/<br[^>]*>/gi, '\n');
+  txt = txt.replace(/<[^>]+>/g, ''); 
+  txt = unescapeHtml(txt);
+
+  return txt.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// 2) Parses Custom Syntax to strictly correct HTML (Handles Visual & Preview layouts independently)
+function customSyntaxToHtml(txt, forQuill = false) {
+  let s = txt || '';
+  s = escapeHtml(s); // Sanitize the raw user strings first to protect layout
+
+  // Replace Block Structures
+  s = s.replace(/\\h2:([\s\S]*?):h2\\/g,   (_,t)=> `<h2>${t}</h2>`);
+  s = s.replace(/\\h3:([\s\S]*?):h3\\/g,   (_,t)=> `<h3>${t}</h3>`);
+  s = s.replace(/\\h4:([\s\S]*?):h4\\/g,   (_,t)=> `<h4>${t}</h4>`);
+  s = s.replace(/\\p:([\s\S]*?):p\\/g,     (_,t)=> `<p>${t}</p>`);
+  s = s.replace(/\\quote:([\s\S]*?):quote\\/g,(_,t)=>`<blockquote>${t}</blockquote>`);
+
+  // Lists
+  s = s.replace(/\\ul:\n([\s\S]*?):ul\\/g, function(_,$1){
+    return '<ul>\n'+$1.replace(/\\li:([\s\S]*?):li\\/g,(_,t)=>`<li>${t}</li>\n`)+'</ul>';
+  });
+  s = s.replace(/\\ol:\n([\s\S]*?):ol\\/g, function(_,$1){
+    return '<ol>\n'+$1.replace(/\\li:([\s\S]*?):li\\/g,(_,t)=>`<li>${t}</li>\n`)+'</ol>';
+  });
+
+  // Dynamic Custom Blocks
+  if (forQuill) {
+    // Preserves complex tags as raw editable blocks internally so Quill doesn't delete them!
+    s = s.replace(/\\code=([a-z0-9]*):\n([\s\S]*?)\n?:code\\/gi, (_,l,t)=> `<pre class="ql-syntax" spellcheck="false">${t}</pre>`);
+    s = s.replace(/\\code:\n([\s\S]*?)\n?:code\\/gi, (_,t)=> `<pre class="ql-syntax" spellcheck="false">${t}</pre>`);
+    s = s.replace(/\\note:([\s\S]*?):note\\/g, (_,t)=>`<p>\\note:${t}:note\\</p>`);
+    s = s.replace(/\\warn:([\s\S]*?):warn\\/g, (_,t)=>`<p>\\warn:${t}:warn\\</p>`);
+    s = s.replace(/\\success:([\s\S]*?):success\\/g, (_,t)=>`<p>\\success:${t}:success\\</p>`);
+    s = s.replace(/\\tbl:\n([\s\S]*?)\n?:tbl\\/g, (_,t)=>`<p>\\tbl:\n${t}\n:tbl\\</p>`);
+    s = s.replace(/\\hr\\/g, `<p>\\hr\\</p>`);
+    s = s.replace(/\\img=([^\s:]+):([\s\S]*?):img\\/g, (_,url,alt)=>`<img src="${url}">`);
+  } else {
+    // Beautiful, stylized output ready for frontend display & highlight
+    s = s.replace(/\\code=([a-z0-9]+):\n([\s\S]*?)\n?:code\\/gi, (_,l,t)=> `<pre><code class="language-${l}">${t}</code></pre>`);
+    s = s.replace(/\\code:\n([\s\S]*?)\n?:code\\/gi, (_,t)=> `<pre><code>${t}</code></pre>`);
+    s = s.replace(/\\note:([\s\S]*?):note\\/g, (_,t)=>`<div class="note">${t}</div>`);
+    s = s.replace(/\\warn:([\s\S]*?):warn\\/g, (_,t)=>`<div class="warn">${t}</div>`);
+    s = s.replace(/\\success:([\s\S]*?):success\\/g, (_,t)=>`<div class="success">${t}</div>`);
+    s = s.replace(/\\tbl:\n([\s\S]*?)\n?:tbl\\/g, (_,t)=>{
+      let rows = t.trim().split('\n').filter(r=>r.trim());
+      if(!rows.length) return '';
+      let html='<table><tbody>';
+      rows.forEach(row=>{
+        html+='<tr>'+row.split('|').map(c=>`<td>${c.trim()}</td>`).join('')+'</tr>';
+      });
+      html+='</tbody></table>'; return html;
+    });
+    s = s.replace(/\\hr\\/g, `<hr>`);
+    s = s.replace(/\\img=([^\s:]+):([\s\S]*?):img\\/g, (_,url,alt)=>`<img src="${url}" alt="${alt}" style="max-width:95%;margin:6px auto 12px 2px;border-radius:5px;display:block;">`);
+  }
+
+  // Inline styling replacements
+  s = s.replace(/\\b:([\s\S]*?):b\\/g,     (_,t)=> `<b>${t}</b>`);
+  s = s.replace(/\\i:([\s\S]*?):i\\/g,     (_,t)=> `<i>${t}</i>`);
+  s = s.replace(/\\u:([\s\S]*?):u\\/g,     (_,t)=> `<u>${t}</u>`);
+  s = s.replace(/\\s:([\s\S]*?):s\\/g,     (_,t)=> `<s>${t}</s>`);
+  s = s.replace(/\\ic:([\s\S]*?):ic\\/g,   (_,t)=> `<code>${t}</code>`);
+  s = s.replace(/\\a=([^\s:]+):([\s\S]*?):a\\/g, (_,url,t)=>`<a href="${url}" target="_blank">${t}</a>`);
+
+  return s;
+}
+
+function wordAndCharCount(str) {
+  // Gracefully clear internal syntax strings without nuking inner user text 
+  let _str = (str || '').replace(/\\[a-z0-9=]+:/gi, ' ').replace(/:[a-z0-9]+\\/gi, ' ').replace(/<[^>]+>/g,'');
+  let words = _str.match(/\b\w+\b/g) ||[];
+  let chars = _str.replace(/\s/g, '').length;
+  return[words.length, chars];
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const titleInput = document.getElementById('titleInput');
+  const slugInput = document.getElementById('slugInput');
+  const tagsInput = document.getElementById('tagsInput');
+  const statusInput = document.getElementById('statusInput');
+  const authorInput = document.getElementById('authorInput');
+  const imgInput = document.getElementById('imgInput');
+  const descInput = document.getElementById('descInput');
+  const countsSpan = document.getElementById('wordCounts');
+  const mainToolbar = document.getElementById('mainToolbar');
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const visualPane = document.getElementById('visualPane');
+  const sourcePane = document.getElementById('sourcePane');
+  const previewPane = document.getElementById('previewPane');
+  const jsonPane = document.getElementById('jsonPane');
+  const themeToggle = document.getElementById('themeToggle');
+  const STORAGE_KEY = "jsonblog_save";
+
+  // THEME SWITCH
+  function setTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    themeToggle.innerHTML = dark ? '<span class="material-icons">light_mode</span>' : '<span class="material-icons">dark_mode</span>';
+  }
+  setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  themeToggle.onclick = function() {
+    let dark = document.documentElement.getAttribute('data-theme') !== "dark";
+    setTheme(dark); localStorage.setItem('jsonblog_theme', dark ? 'dark' : 'light');
+  };
+  if (localStorage.getItem('jsonblog_theme')) setTheme(localStorage.getItem('jsonblog_theme') === 'dark');
+
+  // TOOLBAR BUILD
+  function buildToolbar() {
+    mainToolbar.innerHTML = '';
+    for (const ctag of customTags) {
+      const btn = document.createElement('button');
+      btn.type = "button"; btn.className = "tool-btn";
+      btn.innerHTML = getToolbarIcon(ctag.tag);
+      btn.title = ctag.hint + (ctag.shortcut ? ` (${ctag.shortcut})` : '');
+      btn.dataset.tag = ctag.tag; btn.tabIndex = 0;
+      btn.addEventListener('click', () => insertTag(ctag.tag));
+      mainToolbar.appendChild(btn);
+    }
+  }
+  buildToolbar();
+
+  // QUILL & CM INIT
+  let quill = new Quill('#quillArea', {modules:{toolbar: false}, theme:'snow', placeholder:'Write in Visual mode...'});
+  let cm = CodeMirror(document.getElementById('cmArea'), {
+    mode: 'markdown', lineNumbers: true, lineWrapping: true, theme: 'default',
+    autoCloseBrackets:true, matchBrackets:true, indentUnit:2,
+    extraKeys: {
+      "Tab":"indentMore", "Shift-Tab":"indentLess", "Ctrl-B":()=>insertTag('b'), "Ctrl-I":()=>insertTag('i'),
+      "Ctrl-Shift-C":()=>insertTag('code'), "Ctrl-Alt-2":()=>insertTag('h2'), "Ctrl-Alt-3":()=>insertTag('h3'),
+      "Ctrl-Shift-7":()=>insertTag('ol'), "Ctrl-Shift-8":()=>insertTag('ul'),
+    }
+  });
+
+  // TABS MANAGEMENT
+  let activeTab = "visual";
+  function switchTab(tab) {
+    // Save state natively before transition mapping
+    if (activeTab === 'source' && tab === 'visual') {
+        quill.setContents(quill.clipboard.convert(customSyntaxToHtml(cm.getValue(), true)), 'silent');
+    }
+
+    activeTab = tab;
+    tabButtons.forEach(btn=>btn.classList.toggle('active', btn.dataset.tab===tab));
+    visualPane.classList.toggle('active', tab==='visual');
+    sourcePane.classList.toggle('active', tab==='source');
+    previewPane.classList.toggle('active', tab==='preview');
+    jsonPane.classList.add('hidden');
+
+    if (tab === "visual") quill.focus();
+    else if (tab === "source") { cm.refresh(); cm.focus(); }
+    else if (tab === "preview") {
+      previewPane.innerHTML = customSyntaxToHtml(cm.getValue(), false);
+      previewPane.scrollIntoView(); Prism.highlightAll();
+    }
+    autoGenJson();
+  }
+  tabButtons.forEach(btn=>btn.onclick = ()=>switchTab(btn.dataset.tab));
+
+  // TOOLBAR ACTION MAPPER
+  function insertTag(tag) {
+    if (activeTab === 'visual') {
+      if (["b","i","u","s"].includes(tag)) return quill.format({b:'bold',i:'italic',u:'underline',s:'strike'}[tag], true);
+      if (tag==="ic") return quill.format('code', true);
+      if (tag==="h2") return quill.formatLine(quill.getSelection(true).index, 1, 'header', 2);
+      if (tag==="h3") return quill.formatLine(quill.getSelection(true).index, 1, 'header', 3);
+      if (tag==="h4") return quill.formatLine(quill.getSelection(true).index, 1, 'header', 4);
+      if (tag==="ul") return quill.formatLine(quill.getSelection(true).index, 1, 'list', 'bullet');
+      if (tag==="ol") return quill.formatLine(quill.getSelection(true).index, 1, 'list', 'ordered');
+      if (tag==="p")  return quill.formatLine(quill.getSelection(true).index, 1, 'header', false);
+      if (tag==="code") { let r = quill.getSelection(true); quill.formatLine(r.index, r.length || 1, 'code-block', true); return; }
+      if (tag==="a") { let url=prompt('Insert link URL:','https://'); if(url) quill.format('link',url); return;}
+      if (tag==="img") { let url=prompt('Image URL:','https://'); if(url) quill.insertEmbed(quill.getSelection(true).index, 'image', url, 'user'); return;}
+      if (tag==="hr") { quill.insertText(quill.getSelection(true).index, '\n\\hr\\\n'); return;}
+      if (tag==="quote") { let q=prompt("Quote text?","Text"); if(q) quill.insertText(quill.getSelection(true).index, q, {'blockquote':true}); return;}
+      
+      if (["note","warn","success"].includes(tag)) {
+        let n = prompt({note:"Note",warn:"Warning",success:"Success"}[tag] + " text?", "");
+        if (n) quill.insertText(quill.getSelection(true).index, `\n\\${tag}:${n}:${tag}\\\n`);
+        return;
+      }
+      if (tag==="tbl") {
+        let header=prompt("Header: Name|Role","Name|Role"), row1=prompt("Row 1: Ali|Dev");
+        if (header && row1) quill.insertText(quill.getSelection(true).index, `\n\\tbl:\n${header}\n${row1}\n:tbl\\\n`);
+        return;
+      }
+    } else if (activeTab === 'source') {
+      let doc = cm.getDoc(), sel = doc.getSelection(), text = sel || "...";
+      let ins = `\\${tag}:${text}:${tag}\\`;
+      
+      if (tag==="h2"||tag==="h3"||tag==="h4") ins = `\\${tag}:${text}:${tag}\\\n`;
+      else if (tag==="p") ins = `\\p:${text}:p\\\n`;
+      else if (tag==="code") ins = `\\code=js:\n${text}\n:code\\\n`;
+      else if (tag==="a") ins = `\\a=https://:${text}:a\\`;
+      else if (tag==="img") ins = `\\img=https://:${text}:img\\`;
+      else if (tag==="ul"||tag==="ol") ins = `\\${tag}:\n\\li:${text}:li\\\n:${tag}\\\n`;
+      else if (tag==="hr") ins = `\\hr\\\n`;
+      else if (tag==="tbl") ins = `\\tbl:\nName|Role\n${text}\n:tbl\\\n`;
+      else if (["note","warn","success","quote"].includes(tag)) ins = `\\${tag}:${text}:${tag}\\\n`;
+      
+      doc.replaceSelection(ins, 'around'); cm.focus();
+    }
+  }
+
+  // EDITOR CHANGE TRIGGERS
+  quill.on('text-change', ()=> {
+    if(activeTab==='visual') cm.setValue(htmlToCustomSyntax(quill.root.innerHTML));
+    autoGenJson(); autoSaveDraft(); updateCounts();
+  });
+  cm.on('change', ()=> {
+    autoGenJson(); autoSaveDraft(); updateCounts();
+  });
+
+  // METADATA LISTENERS
+  titleInput.addEventListener('input',function(){
+    let t = this.value.replace(/\b\w/g, s=>s.toUpperCase()).replace(/[^\s][A-Z]{2,}/g,s=>s[0].toUpperCase()+s.slice(1).toLowerCase());
+    if (t !== this.value) this.value = t;
+    if (!slugInput.value.trim()) slugInput.value = (this.value||'').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/\s+/g, '-');
+    autoGenJson(); autoSaveDraft();
+  });[slugInput, tagsInput, statusInput, authorInput, imgInput, descInput].forEach(el => 
+    el.addEventListener('input', () => { autoGenJson(); autoSaveDraft(); })
+  );
+
+  // JSON OUTPUT MAPPER
+  function getOutputJSON() {
+    return {
+      "Title":       titleInput.value.trim(),
+      "Slug":        slugInput.value.trim(),
+      "Date":        getCurrentDateString(),
+      "Status":      statusInput.value,
+      "Author":      authorInput.value.trim(),
+      "Tags":        (tagsInput.value||'').split(',').map(s=>s.trim()).filter(s=>!!s),
+      "Img":         imgInput.value.trim(),
+      "Description": descInput.value.trim(),
+      "Data":        cm.getValue() // Source is continuously synced
+    };
+  }
+  function autoGenJson() { jsonPane.innerText = JSON.stringify(getOutputJSON(), null, 2); }
+  function updateCounts() {
+    let [w, c] = wordAndCharCount(cm.getValue());
+    countsSpan.textContent = `${w} words, ${c} chars`;
+  }
+  function getCurrentDateString() {
+    let d=new Date(), p=x=>(x<10?'0':'')+x; return `${p(d.getDate())}-${p(d.getMonth()+1)}-${d.getFullYear()}`;
+  }
+
+  // EXPORT / ACTIONS
+  document.getElementById('copyJSON').onclick = function() {
+    navigator.clipboard.writeText(JSON.stringify(getOutputJSON(),null,2));
+    this.textContent = "Copied!"; setTimeout(()=> this.textContent = "Copy JSON",900);
+  };
+  document.getElementById('downloadJSON').onclick = function() {
+    let a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(getOutputJSON(),null,2)], {type:'application/json'}));
+    a.download = (titleInput.value.replace(/\s/g,'_').replace(/[^\w\-]/g,'') || 'blog') + '_jsonblog.json';
+    a.click();
+  };
+  document.getElementById('clearAll').onclick = function() {
+    if (!confirm("Clear all data permanently?")) return;
+    titleInput.value=slugInput.value=tagsInput.value=statusInput.value=authorInput.value=imgInput.value=descInput.value='';
+    cm.setValue(''); switchTab('visual'); localStorage.removeItem(STORAGE_KEY);
+  };
+
+  // AUTOSAVE CACHE
+  function autoSaveDraft() {
+    let d = {
+      title: titleInput.value, slug: slugInput.value, tags: tagsInput.value, status: statusInput.value,
+      author: authorInput.value, img: imgInput.value, desc: descInput.value, source: cm.getValue()
+    };
+    try{localStorage.setItem(STORAGE_KEY, JSON.stringify(d));}catch{}
+  }
+  function loadFromDraft() {
+    try {
+      let d = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+      if(d.title) {
+        titleInput.value=d.title||''; slugInput.value=d.slug||''; tagsInput.value=d.tags||'';
+        statusInput.value=d.status||''; authorInput.value=d.author||''; imgInput.value=d.img||'';
+        descInput.value=d.desc||''; 
+        if (d.source) cm.setValue(d.source);
+      }
+    }catch{}
+  }
+  
+  loadFromDraft();
+  switchTab('visual'); // Final Sync init
+});
+</script>
+</body>
+</html>
