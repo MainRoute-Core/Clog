@@ -1,0 +1,41 @@
+[
+  {
+    "id": "pythonListComprehension",
+    "Name": "Mastering Python List Comprehensions",
+    "Date": "14-05-2024",
+    "Url": "https://raw.githubusercontent.com/MainRoute-Core/blog/main/blogs/python_list_comprehension.json",
+    "Tags": [
+      "Python",
+      "Programming",
+      "Tips",
+      "CleanCode"
+    ],
+    "Status": "New"
+  },
+  {
+    "id": "runPythonServer",
+    "Name": "Run Python Server",
+    "Date": "12-05-2024",
+    "Url": "https://raw.githubusercontent.com/MainRoute-Core/blog/main/blogs/run_python_server.json",
+    "Tags": [
+      "Python",
+      "Web",
+      "DevOps",
+      "Server"
+    ],
+    "Status": "Pub"
+  },
+  {
+    "id": "webScrapingPython",
+    "Name": "Web Scraping with Python",
+    "Date": "16-05-2024",
+    "Url": "https://raw.githubusercontent.com/MainRoute-Core/blog/main/blogs/web_scraping_python.json",
+    "Tags": [
+      "Python",
+      "DataScience",
+      "Automation",
+      "BeautifulSoup"
+    ],
+    "Status": "Un"
+  }
+]
