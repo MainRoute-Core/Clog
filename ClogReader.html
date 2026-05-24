@@ -21,6 +21,12 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link href="https://cdn.jsdelivr.net/gh/MainRoute-Core/CoreSans@main/CoreSans-Regular_en.otf" rel="stylesheet">
 
+    <!-- Markdown Parser CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+
+    <!-- GitHub Styled Markdown CSS for beautiful document structures -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+
     <!-- 100% INTERNAL CSS -->
     <style>
         @font-face {
@@ -115,67 +121,129 @@
         .nav-logo { display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 900; letter-spacing: -0.05em; }
         .nav-logo img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--mrc); }
 
-        /* Main List View */
+        .system-status { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-muted); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+        /* Two-Column Responsive Workspace Layout */
         #list-view { padding-top: calc(var(--nav-height) + 5rem); max-width: 1200px; margin: 0 auto; position: relative; z-index: 10; min-height: 100vh; padding-bottom: 4rem;}
         
-        .blog-controls {
-            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;
-            margin-bottom: 3rem; padding: 0 1.5rem;
+        .main-workspace { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; padding: 0 1.5rem; align-items: start; }
+        
+        @media (max-width: 1024px) {
+            .main-workspace { grid-template-columns: 1fr; }
         }
 
-        .search-box { position: relative; flex-grow: 1; max-width: 400px; }
+        /* Responsive Sidebar Filters */
+        .filter-sidebar { display: flex; flex-direction: column; gap: 1.5rem; position: sticky; top: calc(var(--nav-height) + 2rem); }
+        
+        @media (max-width: 1024px) {
+            .filter-sidebar {
+                position: fixed; top: 0; left: -320px; width: 300px; height: 100vh;
+                z-index: 1001; border-radius: 0; padding: 6rem 1.5rem 2rem;
+                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto;
+                background: rgba(9, 9, 11, 0.95);
+            }
+            .filter-sidebar.active { left: 0; }
+        }
+
+        .sidebar-section { padding: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; }
+        .sidebar-title { font-size: 0.75rem; font-weight: 800; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; margin-bottom: 0.25rem; }
+
+        .search-box { position: relative; width: 100%; }
         .search-box input {
-            width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border-radius: 99px;
+            width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 99px;
             background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
-            color: white; outline: none; transition: all 0.3s ease; font-family: inherit;
+            color: white; outline: none; transition: all 0.3s ease; font-family: inherit; font-size: 0.9rem;
         }
         .search-box input:focus { border-color: var(--mrc); background: rgba(244,66,52,0.03); box-shadow: 0 0 15px var(--mrc-glow); }
-        .search-box svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 1.1rem; }
+        .search-box svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 1rem; }
 
-        .cat-btn {
-            background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
-            padding: 0.8rem 1.5rem; border-radius: 99px; color: white; cursor: pointer;
-            display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem;
+        /* Box Filter Lists */
+        .box-filter-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .box-filter-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.6rem 0.8rem; border-radius: 8px; background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border); cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
         }
-        .cat-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+        .box-filter-item:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.15); }
+        .box-filter-item.active { background: rgba(244, 66, 52, 0.1); border-color: rgba(244, 66, 52, 0.3); color: var(--mrc); }
+        .box-filter-count { font-size: 0.7rem; font-family: var(--font-mono); background: rgba(255, 255, 255, 0.08); padding: 0.15rem 0.4rem; border-radius: 4px; color: var(--text-muted); }
+        .box-filter-item.active .box-filter-count { background: rgba(244, 66, 52, 0.2); color: var(--mrc); }
 
-        #cat-panel {
-            position: absolute; right: 1.5rem; top: 120px; width: 280px; padding: 1.5rem;
-            opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 50;
-        }
-        #cat-panel.active { opacity: 1; visibility: visible; transform: translateY(0); }
-        
         .tags-wrapper { display: flex; flex-wrap: wrap; gap: 0.5rem; }
         .tag {
             font-family: var(--font-mono); font-size: 0.7rem; padding: 0.4rem 0.8rem;
-            border-radius: 99px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+            border-radius: 99px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
             color: var(--text-muted); cursor: pointer; transition: all 0.2s;
         }
-        .tag:hover { background: rgba(255,255,255,0.1); color: white; }
+        .tag:hover { background: rgba(255,255,255,0.08); color: white; }
         .tag.active { background: rgba(244,66,52,0.1); color: var(--mrc); border-color: rgba(244,66,52,0.3); }
 
-        /* Blog Grid */
-        .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; padding: 0 1.5rem; }
+        /* Mobile filter trigger bar */
+        .mobile-filter-bar { display: none; justify-content: flex-end; padding: 0 1.5rem; margin-bottom: 1.5rem; }
+        @media (max-width: 1024px) { .mobile-filter-bar { display: flex; } }
+        
+        .cat-btn {
+            background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
+            padding: 0.8rem 1.5rem; border-radius: 99px; color: white; cursor: pointer;
+            display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; 
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem;
+        }
+        .cat-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+
+        .btn-clear-filters {
+            width: 100%; border: 1px solid var(--danger-glow); background: rgba(239, 68, 68, 0.05);
+            color: var(--danger); font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+            padding: 0.6rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-clear-filters:hover { background: var(--danger); color: white; }
+
+        /* Mobile Sidebar Backdrop Overlay */
+        .sidebar-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+            z-index: 1000; display: none;
+        }
+        .sidebar-backdrop.active { display: block; }
+
+        /* Professional Cards Grid Layout */
+        .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; width: 100%; }
         
         .card {
-            padding: 1.8rem; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.3s, border-color 0.3s;
+            padding: 1.8rem; display: flex; flex-direction: column; cursor: pointer; 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
+            position: relative; overflow: hidden; gap: 0.8rem;
         }
-        .card:hover { transform: translateY(-5px); border-color: var(--mrc-glow); }
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--mrc), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .card:hover::before { opacity: 1; }
+        .card:hover { transform: translateY(-5px); border-color: rgba(244, 66, 52, 0.4); box-shadow: 0 10px 30px rgba(244,66,52,0.08); }
         
-        .card.status-not {
-            cursor: not-allowed; opacity: 0.7; border-color: var(--danger-glow);
-        }
+        .card.status-not { cursor: not-allowed; opacity: 0.75; border-color: var(--danger-glow); }
         .card.status-not:hover { transform: none; border-color: var(--danger); box-shadow: 0 0 20px var(--danger-glow); }
+        .card.status-not::before { background: linear-gradient(90deg, transparent, var(--danger), transparent); }
 
-        .card-status { font-size: 0.65rem; font-weight: 800; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; padding: 0.3rem 0.6rem; border-radius: 4px; display: inline-block; width: max-content; margin-bottom: 1rem; }
+        .card-category-tag { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mrc); }
+        .card-title { font-size: 1.4rem; font-weight: 800; line-height: 1.3; color: white; }
+        
+        .card-desc {
+            font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.5rem;
+        }
+
+        .card-meta-row {
+            margin-top: auto; border-top: 1px solid var(--glass-border); padding-top: 1rem;
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);
+        }
+        .card-status { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
         .status-pub { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
         .status-not { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
 
-        .card-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; line-height: 1.3; }
-        .card-date { font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono); margin-bottom: 1.5rem; }
-        .card-bottom { margin-top: auto; border-top: 1px solid var(--glass-border); padding-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
-
-        /* --- Full Blog Reader View --- */
+        /* --- Full Clog Reader View --- */
         #full-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-dark); z-index: 1000; overflow-y: auto; overflow-x: hidden;
@@ -201,50 +269,48 @@
         .article-container { max-width: 800px; margin: 0 auto; padding: 4rem 1.5rem 8rem; }
         .hero-img { width: 100%; height: 400px; object-fit: cover; border-radius: 1.5rem; margin-bottom: 2.5rem; border: 1px solid var(--glass-border); }
         
-        .article-title { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 900; line-height: 1.1; margin-bottom: 1rem; letter-spacing: -0.02em; }
+        .article-title { font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 900; line-height: 1.1; margin-bottom: 1rem; letter-spacing: -0.02em; }
         .article-meta { display: flex; align-items: center; gap: 1rem; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.85rem; padding-bottom: 2rem; border-bottom: 1px solid var(--glass-border); margin-bottom: 2rem; }
 
-        /* TinyMCE / Blog Content Styles */
-        .blog-content { font-size: 1.1rem; line-height: 1.8; color: #d1d5db; }
-        .blog-content h1, .blog-content h2, .blog-content h3, .blog-content h4 { color: #fff; font-weight: 800; margin: 2rem 0 1rem; }
-        .blog-content h2 { font-size: 2rem; margin-top: 3rem; }
-        .blog-content h3 { font-size: 1.5rem; }
-        .blog-content p { margin-bottom: 1.5rem; }
-        .blog-content ul, .blog-content ol { margin: 1.5rem 0 1.5rem 2rem; }
-        .blog-content li { margin-bottom: 0.5rem; }
+        /* Markdown Post Content Styles mapped safely over the Github Markdown CSS */
+        .markdown-body {
+            background: transparent !important; color: #e2e8f0 !important;
+            font-family: var(--font-sans) !important; font-size: 1.1rem !important; line-height: 1.8 !important;
+        }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { color: #fff !important; font-weight: 800 !important; font-family: var(--font-sans) !important; border-bottom: 1px solid var(--glass-border) !important; padding-bottom: 0.3em !important; }
+        .markdown-body h1 { font-size: 2.25rem !important; }
+        .markdown-body h2 { font-size: 1.8rem !important; margin-top: 2.5rem !important; }
+        .markdown-body h3 { font-size: 1.4rem !important; }
+        .markdown-body p { margin-bottom: 1.5rem !important; }
         
-        .blog-content a { color: var(--mrc); text-decoration: underline; text-decoration-color: rgba(244,66,52,0.3); text-underline-offset: 4px; }
-        .blog-content a:hover { text-decoration-color: var(--mrc); }
+        .markdown-body a { color: var(--mrc) !important; text-decoration: underline !important; text-decoration-color: rgba(244,66,52,0.3) !important; text-underline-offset: 4px !important; }
+        .markdown-body a:hover { text-decoration-color: var(--mrc) !important; }
         
-        /* Retained Custom Callout styling (Can still be used manually via HTML div classes if needed) */
-        .blog-content .note, .blog-content .warn, .blog-content .success {
+        .markdown-body pre { background-color: #000 !important; border: 1px solid var(--glass-border) !important; border-radius: 1rem !important; padding: 1.5rem !important; }
+        .markdown-body code { font-family: var(--font-mono) !important; background-color: rgba(255,255,255,0.08) !important; color: #f1f5f9 !important; padding: 0.2rem 0.4rem !important; border-radius: 4px !important; }
+        .markdown-body pre code { background: transparent !important; padding: 0 !important; border-radius: 0 !important; }
+        
+        .markdown-body blockquote { border-left: 4px solid var(--mrc) !important; color: var(--text-muted) !important; background: rgba(255,255,255,0.01) !important; border-radius: 0 8px 8px 0 !important; }
+        .markdown-body img { border-radius: 1rem !important; border: 1px solid var(--glass-border) !important; margin: 2rem 0 !important; }
+        .markdown-body hr { background-color: var(--glass-border) !important; height: 1px !important; }
+        .markdown-body table tr { background-color: #0d0d0f !important; border-top: 1px solid var(--glass-border) !important; }
+        .markdown-body table tr:nth-child(2n) { background-color: #141417 !important; }
+        .markdown-body table th, .markdown-body table td { border: 1px solid var(--glass-border) !important; padding: 0.8rem 1rem !important; }
+        .markdown-body table th { background: rgba(255,255,255,0.03) !important; color: white !important; }
+
+        /* Custom Callout styling (retained for backward markup compatibility) */
+        .markdown-body .note, .markdown-body .warn, .markdown-body .success {
             padding: 1.5rem; border-radius: 1rem; margin: 2rem 0; border-left: 4px solid; background: rgba(255,255,255,0.02); backdrop-filter: blur(10px);
         }
-        .blog-content .note { border-color: var(--info); color: #bfdbfe; }
-        .blog-content .warn { border-color: var(--warn); color: #fde68a; }
-        .blog-content .success { border-color: var(--success); color: #a7f3d0; }
-        
-        .blog-content pre { 
-            background: #000; color: #f8fafc; padding: 1.5rem; border: 1px solid var(--glass-border);
-            border-radius: 1rem; overflow-x: auto; margin: 2rem 0; font-family: var(--font-mono); font-size: 0.9rem;
-        }
-        .blog-content code { font-family: var(--font-mono); background: rgba(255,255,255,0.1); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
-        .blog-content pre code { background: transparent; padding: 0; }
-        
-        .blog-content blockquote { border-left: 4px solid var(--mrc); padding-left: 1.5rem; font-style: italic; color: var(--text-muted); margin: 2rem 0; font-size: 1.2rem; }
-        .blog-content img, .blog-content figure { max-width: 100%; height: auto; border-radius: 1rem; margin: 2rem 0; border: 1px solid var(--glass-border); display: block; }
-        .blog-content hr { border: none; height: 1px; background: var(--glass-border); margin: 3rem 0; }
-        
-        .blog-content table { width: 100%; border-collapse: collapse; margin: 2rem 0; font-size: 0.95rem; }
-        .blog-content td, .blog-content th { border: 1px solid var(--glass-border); padding: 1rem; text-align: left; }
-        .blog-content th { background: rgba(255,255,255,0.05); color: #fff; }
+        .markdown-body .note { border-color: var(--info); color: #bfdbfe; }
+        .markdown-body .warn { border-color: var(--warn); color: #fde68a; }
+        .markdown-body .success { border-color: var(--success); color: #a7f3d0; }
 
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-dark); }
         ::-webkit-scrollbar-thumb { background: rgba(244, 66, 52, 0.5); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--mrc); }
-
     </style>
 </head>
 <body>
@@ -268,6 +334,9 @@
     <div class="tech-grid"></div>
     <div class="ambient-orb" style="width: 40vw; height: 40vw; top: -10%; left: -10%;"></div>
 
+    <!-- Mobile Drawer Backdrop -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
+
     <!-- Navigation -->
     <header class="header" id="navbar">
         <div class="nav-bar glass-panel">
@@ -288,24 +357,51 @@
             <p class="text-muted mt-2">Technical deep-dives, architecture updates, and engineering logs.</p>
         </div>
 
-        <div class="blog-controls">
-            <div class="search-box">
-                <svg class="icon"><use href="#icon-search"></use></svg>
-                <input type="text" id="search" placeholder="Search architecture, terms, tags...">
-            </div>
-
-            <button class="cat-btn" id="catBtn">
+        <!-- Mobile Filter Action Bar -->
+        <div class="mobile-filter-bar">
+            <button class="cat-btn" onclick="toggleMobileSidebar()">
                 <svg class="icon"><use href="#icon-filter"></use></svg> Filter Logs
             </button>
         </div>
 
-        <div id="cat-panel" class="glass-panel">
-            <h4 class="font-mono text-muted uppercase tracking-widest" style="font-size: 0.7rem; margin-bottom: 1rem;">Filter by Category</h4>
-            <div id="cat-list" class="tags-wrapper"></div>
-        </div>
+        <div class="main-workspace">
+            <!-- Sidebar with Filters (Adaptive Sideboxes) -->
+            <aside class="filter-sidebar glass-panel" id="filter-sidebar">
+                <div class="sidebar-section">
+                    <h4 class="sidebar-title">Search Workspace</h4>
+                    <div class="search-box">
+                        <svg class="icon"><use href="#icon-search"></use></svg>
+                        <input type="text" id="search" placeholder="Query terms, tags...">
+                    </div>
+                </div>
 
-        <div class="blog-grid" id="grid">
-            <!-- JS Injection -->
+                <div class="sidebar-section">
+                    <h4 class="sidebar-title">Categories</h4>
+                    <div id="category-box-list" class="box-filter-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h4 class="sidebar-title">Sub-Categories / Tags</h4>
+                    <div id="tag-box-list" class="tags-wrapper">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="active-filters-sec" style="display: none;">
+                    <button class="btn-clear-filters" onclick="clearAllFilters()">
+                        <span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:4px;">clear_all</span> Clear Filters
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Log Cards Area -->
+            <section class="content-area">
+                <div class="blog-grid" id="grid">
+                    <!-- JS Injection -->
+                </div>
+            </section>
         </div>
     </main>
 
@@ -327,26 +423,38 @@
 
     <!-- VANILLA JS SPA LOGIC -->
     <script>
-        // High-Performance Data Routes
-        const INDEX_URL = "https://raw.githubusercontent.com/MainRoute-Core/blog/output/blogs.json";
-        const CONTENT_BASE_URL = "https://cdn.jsdelivr.net/gh/MainRoute-Core/blog@main/blogs/";
-        
-        let allBlogs =[];
+        // High-Performance Configurable Cloud Sync URLs
+        const GITHUB_OWNER = "MainRoute-Core";
+        const GITHUB_REPO = "blog";
+        const INDEX_BRANCH = "output";        // Branch holding the index array file (db.json / blogs.json)
+        const INDEX_FILE = "db.json";          // Database JSON structure
+        const CONTENT_BRANCH = "main";         // Branch holding individual JSON bodies
+        const CONTENT_SUBFOLDER = "blogs";     // sub-folder holding individual raw blog posts
 
-        // 1. Initialization & Data Fetching
+        const INDEX_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${INDEX_BRANCH}/${INDEX_FILE}`;
+        const CONTENT_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${CONTENT_BRANCH}/${CONTENT_SUBFOLDER}/`;
+        
+        let allBlogs = [];
+        let activeCategory = null;
+        let activeTag = null;
+        let searchQuery = "";
+
+        // 1. Initialization & Fetching
         async function initApp() {
             try {
                 const res = await fetch(INDEX_URL);
                 const rawData = await res.json();
                 
-                // Filter out 'Un' (Unpublished) entirely based on new structure
+                // Exclude unpublished blogs
                 allBlogs = rawData.filter(b => b.Status !== 'Un');
                 
-                renderGrid(allBlogs);
-                renderFilters();
+                // Set Up initial UI render
+                applyFiltersAndRender();
+                buildSidebarSelectors();
                 checkUrlRouting();
             } catch (err) {
-                document.getElementById('grid').innerHTML = '<p class="text-mrc text-center">Failed to fetch core logs. System offline.</p>';
+                console.error(err);
+                document.getElementById('grid').innerHTML = '<p class="text-mrc text-center" style="grid-column: 1/-1; padding:3rem;">Failed to fetch core logs. System offline.</p>';
             } finally {
                 setTimeout(() => {
                     document.getElementById('loader').classList.add('hidden');
@@ -355,84 +463,181 @@
             }
         }
 
-        // 2. Render Cards
+        // 2. Adaptive Multi-layer Filter Pipeline
+        function applyFiltersAndRender() {
+            const filtered = allBlogs.filter(b => {
+                const title = (b.Title || b.Name || "").toLowerCase();
+                const desc = (b.Desc || "").toLowerCase();
+                const author = (b.Author || "").toLowerCase();
+                const cats = (b.Categories || b.Cat || []).map(c => c.toLowerCase());
+                const tags = (b.Tags || []).map(t => t.toLowerCase());
+
+                const matchesQuery = !searchQuery || 
+                    title.includes(searchQuery) || 
+                    desc.includes(searchQuery) ||
+                    author.includes(searchQuery) ||
+                    cats.some(c => c.includes(searchQuery)) ||
+                    tags.some(t => t.includes(searchQuery));
+
+                const matchesCategory = !activeCategory || 
+                    cats.includes(activeCategory.toLowerCase());
+
+                const matchesTag = !activeTag || 
+                    tags.includes(activeTag.toLowerCase());
+
+                return matchesQuery && matchesCategory && matchesTag;
+            });
+
+            renderGrid(filtered);
+            updateSidebarUIState();
+        }
+
+        // 3. Render Grid Cards (Old look updated to a more premium professional design)
         function renderGrid(data) {
             const grid = document.getElementById('grid');
             
             if(data.length === 0) {
-                grid.innerHTML = '<p class="text-muted text-center" style="grid-column: 1/-1; padding: 3rem;">No logs found matching parameters.</p>';
+                grid.innerHTML = '<p class="text-muted text-center" style="grid-column: 1/-1; padding: 5rem;">No logs found matching filter criteria.</p>';
                 return;
             }
 
             grid.innerHTML = data.map(b => {
                 const isNot = b.Status === 'Not';
                 const cardClass = isNot ? 'card glass-panel status-not' : 'card glass-panel';
+                
+                // Map auto properties to accommodate old / new JSON outputs safely
+                const title = b.Title || b.Name || "Untitled Core Log";
+                const desc = b.Desc || "No summary provided for this engineering log entry.";
+                const id = b.Id || b.Article || "";
+                const date = b.Date || "Unknown Date";
+                const cats = b.Categories || b.Cat || [];
+                
+                const primaryCategory = cats.length > 0 ? cats[0] : "General";
+
                 const statusHtml = isNot 
-                    ? `<span class="card-status status-not"><svg class="icon" style="width:10px; height:10px; display:inline; margin-right:4px;"><use href="#icon-lock"></use></svg> Classifed</span>` 
-                    : `<span class="card-status status-pub"><svg class="icon" style="width:10px; height:10px; display:inline; margin-right:4px;"><use href="#icon-book-open"></use></svg> Published</span>`;
+                    ? `<span class="card-status status-not"><svg class="icon" style="width:10px; height:10px;"><use href="#icon-lock"></use></svg> Classified</span>` 
+                    : `<span class="card-status status-pub"><svg class="icon" style="width:10px; height:10px;"><use href="#icon-book-open"></use></svg> Open Log</span>`;
                 
-                // Using b.Article as the ID for clicking
-                const clickEvent = isNot ? '' : `onclick="openArticle('${b.Article}')"`;
-                
-                // Render Categories (Cat) as tags
-                const tagHtml = (b.Cat ||[]).map(t => `<span class="tag" style="pointer-events:none;">${t}</span>`).join('');
+                const clickEvent = isNot ? '' : `onclick="openArticle('${id}')"`;
 
                 return `
                 <div class="${cardClass}" ${clickEvent}>
-                    ${statusHtml}
-                    <h2 class="card-title">${b.Name}</h2>
-                    <div class="card-date">${b.Date}</div>
-                    <div class="card-bottom">
-                        ${tagHtml}
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="card-category-tag">${primaryCategory}</span>
+                        ${statusHtml}
+                    </div>
+                    <h2 class="card-title">${title}</h2>
+                    <p class="card-desc">${desc}</p>
+                    <div class="card-meta-row">
+                        <span>DATE: ${date}</span>
+                        <span>BY: ${b.Author || "MRC CORE"}</span>
                     </div>
                 </div>`;
             }).join('');
         }
 
-        // 3. Filters & Search (Using Categories from Metadata)
-        function renderFilters() {
-            const list = document.getElementById('cat-list');
-            // Extract unique categories safely
-            const tags =[...new Set(allBlogs.flatMap(b => b.Cat || []))];
+        // 4. Sidebar Aggregation and Rendering
+        function buildSidebarSelectors() {
+            // Count category frequencies safely
+            const catCounts = {};
+            const tagCounts = {};
+
+            allBlogs.forEach(b => {
+                const cats = b.Categories || b.Cat || [];
+                const tags = b.Tags || [];
+
+                cats.forEach(c => catCounts[c] = (catCounts[c] || 0) + 1);
+                tags.forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1);
+            });
+
+            // Populate Category Sidebox
+            const catContainer = document.getElementById('category-box-list');
+            let catHtml = `<div class="box-filter-item active" id="cat-all" onclick="selectCategory(null)">
+                <span>All Categories</span>
+                <span class="box-filter-count">${allBlogs.length}</span>
+            </div>`;
+
+            Object.keys(catCounts).sort().forEach(cat => {
+                catHtml += `<div class="box-filter-item" id="cat-${cat.replace(/\s+/g, '-')}" onclick="selectCategory('${cat}')">
+                    <span>${cat}</span>
+                    <span class="box-filter-count">${catCounts[cat]}</span>
+                </div>`;
+            });
+            catContainer.innerHTML = catHtml;
+
+            // Populate Tags cloud
+            const tagContainer = document.getElementById('tag-box-list');
+            let tagHtml = `<span class="tag active" id="tag-all" onclick="selectTag(null)">All Tags</span>`;
             
-            list.innerHTML = `<span class="tag active" onclick="applyFilter(null, this)">All Logs</span>` + 
-                tags.map(t => `<span class="tag" onclick="applyFilter('${t}', this)">${t}</span>`).join('');
+            Object.keys(tagCounts).sort().forEach(tag => {
+                tagHtml += `<span class="tag" id="tag-${tag.replace(/\s+/g, '-')}" onclick="selectTag('${tag}')">#${tag}</span>`;
+            });
+            tagContainer.innerHTML = tagHtml;
         }
 
-        window.applyFilter = function(tag, el) {
-            document.querySelectorAll('#cat-list .tag').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
-            
-            const filtered = tag ? allBlogs.filter(b => (b.Cat ||[]).includes(tag)) : allBlogs;
-            renderGrid(filtered);
-            document.getElementById('cat-panel').classList.remove('active'); // auto-close
+        // Interaction actions
+        window.selectCategory = function(cat) {
+            activeCategory = cat;
+            applyFiltersAndRender();
         };
 
-        // Search in Name, Desc, and Cat
-        document.getElementById('search').addEventListener('input', (e) => {
-            const q = e.target.value.toLowerCase();
-            const filtered = allBlogs.filter(b => 
-                (b.Name || '').toLowerCase().includes(q) || 
-                (b.Desc || '').toLowerCase().includes(q) ||
-                (b.Cat ||[]).some(c => c.toLowerCase().includes(q))
-            );
-            renderGrid(filtered);
-        });
+        window.selectTag = function(tag) {
+            activeTag = tag;
+            applyFiltersAndRender();
+        };
 
-        // Toggle Category Filter Panel
-        document.getElementById('catBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.getElementById('cat-panel').classList.toggle('active');
-        });
-        
-        // Close Category Panel if clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#cat-panel') && !e.target.closest('#catBtn')) {
-                document.getElementById('cat-panel').classList.remove('active');
+        window.clearAllFilters = function() {
+            activeCategory = null;
+            activeTag = null;
+            searchQuery = "";
+            document.getElementById('search').value = "";
+            applyFiltersAndRender();
+        };
+
+        // Update the visual selection state of selectors dynamically
+        function updateSidebarUIState() {
+            // Highlight Categories
+            document.querySelectorAll('#category-box-list .box-filter-item').forEach(item => item.classList.remove('active'));
+            if (activeCategory) {
+                const targetId = `cat-${activeCategory.replace(/\s+/g, '-')}`;
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) targetEl.classList.add('active');
+            } else {
+                document.getElementById('cat-all').classList.add('active');
             }
+
+            // Highlight Tags
+            document.querySelectorAll('#tag-box-list .tag').forEach(item => item.classList.remove('active'));
+            if (activeTag) {
+                const targetId = `tag-${activeTag.replace(/\s+/g, '-')}`;
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) targetEl.classList.add('active');
+            } else {
+                document.getElementById('tag-all').classList.add('active');
+            }
+
+            // Control the Clear Filter action viability
+            const clearBtnSec = document.getElementById('active-filters-sec');
+            if (activeCategory || activeTag || searchQuery) {
+                clearBtnSec.style.display = 'block';
+            } else {
+                clearBtnSec.style.display = 'none';
+            }
+        }
+
+        // Live typing search observer
+        document.getElementById('search').addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            applyFiltersAndRender();
         });
 
-        // 4. Routing & Article Loading Logic
+        // Mobile responsive UI toggle
+        window.toggleMobileSidebar = function() {
+            document.getElementById('filter-sidebar').classList.toggle('active');
+            document.getElementById('sidebar-backdrop').classList.toggle('active');
+        };
+
+        // 5. Routing & Article Loading Logic (Refined)
         function checkUrlRouting() {
             const params = new URLSearchParams(window.location.search);
             const articleId = params.get('log');
@@ -442,55 +647,64 @@
         }
 
         async function openArticle(id, pushState = true) {
-            // Find the blog in our metadata map based on the ID (Article)
-            const blogMeta = allBlogs.find(b => b.Article === id);
+            // Retrieve item mapping using both Id and Article fallback checks
+            const blogMeta = allBlogs.find(b => (b.Id === id || b.Article === id));
             if (!blogMeta) return;
 
+            const title = blogMeta.Title || blogMeta.Name || "Untitled";
+
             if (pushState) {
-                window.history.pushState({ id }, blogMeta.Name, `?log=${id}`);
+                window.history.pushState({ id }, title, `?log=${id}`);
             }
 
-            // Show global loader while fetching the specific JSON
             const loader = document.getElementById('loader');
             loader.classList.remove('hidden');
 
             try {
-                // Fetch using the EXACT filename recorded in the URL metadata field
-                const res = await fetch(CONTENT_BASE_URL + blogMeta.Url);
-                if (!res.ok) throw new Error("File not found on server");
-                
-                const articleData = await res.json();
-                renderFullArticle(articleData);
+                // If the indexing database has the data loaded, avoid double fetches
+                if (blogMeta.Data && blogMeta.Data.trim().length > 0) {
+                    renderFullArticle(blogMeta);
+                } else {
+                    // Fetch dynamic JSON body file using fallback mapping
+                    const targetFile = blogMeta.Url || `${id}.json`;
+                    const res = await fetch(CONTENT_BASE_URL + targetFile);
+                    if (!res.ok) throw new Error("JSON asset could not be resolved from cloud repository.");
+                    
+                    const articleData = await res.json();
+                    renderFullArticle(articleData);
+                }
 
-                // Reveal Reader Full View
+                // Smoothly trigger Reader interface transition
                 document.getElementById('full-view').classList.add('active');
                 document.getElementById('full-view').scrollTo(0, 0);
-                document.body.style.overflow = 'hidden'; // Lock background scroll
+                document.body.style.overflow = 'hidden';
 
             } catch (err) {
-                console.error("Error loading article data:", err);
-                alert("System Error: Unable to fetch the core log. File may be corrupted or missing.");
+                console.error(err);
+                alert("Core System Error: Failed to retrieve complete log document.");
             } finally {
                 loader.classList.add('hidden');
+                // Ensure mobile drawer collapses on read
+                document.getElementById('filter-sidebar').classList.remove('active');
+                document.getElementById('sidebar-backdrop').classList.remove('active');
             }
         }
 
-        // 5. Render Full Article (Direct HTML Injection from TinyMCE)
+        // 6. Complete Dynamic Markdown Rendering (Upgrade from old TinyMCE HTML logic)
         function renderFullArticle(data) {
             const container = document.getElementById('articleBody');
             
-            // Map the JSON Builder outputs
-            const title = data.Title || "Untitled Core Log";
+            const title = data.Title || data.Name || "Untitled Core Log";
             const date = data.Date || "Unknown Date";
-            const author = data.Author || "SYSTEM CORE";
+            const author = data.Author || "MRC CORE";
             const img = data.Img || "";
-            
-            // Render Hero image only if an Img URL is provided
+            const bodyContent = data.Data || "";
+
             const imgHtml = img 
                 ? `<img src="${img}" alt="Hero Image" class="hero-img" onerror="this.style.display='none'">` 
                 : '';
 
-            // Inject the Data exactly as HTML because the JSON Builder saves TinyMCE generated HTML directly into "Data"
+            // Output container HTML setup
             container.innerHTML = `
                 ${imgHtml}
                 <h1 class="article-title">${title}</h1>
@@ -498,16 +712,23 @@
                     <span><strong style="color:var(--text-main)">DATE:</strong> ${date}</span>
                     <span><strong style="color:var(--text-main)">AUTHOR:</strong> ${author}</span>
                 </div>
-                <div class="blog-content">
-                    ${data.Data || '<p class="text-muted font-mono">No body content data found.</p>'}
+                <div class="blog-content markdown-body" id="rendered-md-body">
+                    <!-- Markdown injected safely here -->
                 </div>
             `;
+
+            // Utilize Marked.js for fast compiler compilation
+            const mdBox = document.getElementById('rendered-md-body');
+            if (window.marked) {
+                mdBox.innerHTML = marked.parse(bodyContent);
+            } else {
+                mdBox.innerHTML = `<p class="text-muted font-mono">Rendering processor not loaded. Raw MD fallback:</p><pre>${bodyContent}</pre>`;
+            }
         }
 
-        // 6. Navigation / UX Enhancements
-        document.getElementById('backBtn').addEventListener('click', closeArticle);
+        // 7. Navigation & SPA Flow Controllers
+        document.getElementById('backBtn').addEventListener('click', () => closeArticle(true));
 
-        // Handle Browser Back/Forward buttons smoothly
         window.addEventListener('popstate', (e) => {
             if (e.state && e.state.id) {
                 openArticle(e.state.id, false);
@@ -518,15 +739,14 @@
 
         function closeArticle(pushState = true) {
             document.getElementById('full-view').classList.remove('active');
-            document.body.style.overflow = ''; // Unlock background scroll
+            document.body.style.overflow = '';
             
             if (pushState) {
-                // Clear the ?log= params from the URL cleanly
                 window.history.pushState({}, '', window.location.pathname);
             }
         }
 
-        // 7. Scroll Progress Bar logic
+        // Scrolling dynamics calculation
         const fullView = document.getElementById('full-view');
         const progressBar = document.getElementById('read-progress');
 
@@ -537,9 +757,8 @@
             progressBar.style.width = scrollPercentage + '%';
         });
 
-        // Initialize Application
+        // Fire Application
         initApp();
-
     </script>
 </body>
 </html>
