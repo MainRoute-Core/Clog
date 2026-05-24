@@ -11,7 +11,6 @@
     <meta name="description" content="Technical deep-dives, architecture updates, and engineering logs from MainRoute Core." />
     
     <!-- Icons & Manifest -->
-    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="192x192" href="https://avatars.githubusercontent.com/u/249983472?s=192&v=4">
     <link href="https://avatars.githubusercontent.com/u/249983472?s=180&v=4" rel="apple-touch-icon" sizes="180x180" />
 
@@ -20,14 +19,13 @@
     <!-- Custom Font -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link href="https://cdn.jsdelivr.net/gh/MainRoute-Core/CoreSans@main/CoreSans-Regular_en.otf" rel="stylesheet">
-
-    <!-- Markdown Parser CDN -->
+    
+    <!-- Marked.js Markdown Parser -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 
-    <!-- GitHub Styled Markdown CSS for beautiful document structures -->
+    <!-- GitHub Styled Markdown CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
 
-    <!-- 100% INTERNAL CSS -->
     <style>
         @font-face {
             font-family: 'Core Sans';
@@ -49,17 +47,17 @@
 
             /* Material Dark Theme */
             --bg-dark: #09090b;
-            --bg-surface: #18181b;
-            --bg-surface-elevated: #27272a;
+            --bg-surface: #111115;
+            --bg-surface-elevated: #1d1d24;
             
             /* Text */
             --text-main: #f8fafc;
-            --text-muted: #a1a1aa;
+            --text-muted: #94a3b8;
             
             /* Glassmorphism */
-            --glass-bg: rgba(24, 24, 27, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            --glass-bg: rgba(17, 17, 21, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 
             /* Typography */
             --font-sans: 'Core Sans', system-ui, -apple-system, sans-serif;
@@ -77,7 +75,7 @@
         }
         a { text-decoration: none; color: inherit; transition: all 0.3s ease; }
         img, svg { max-width: 100%; display: block; }
-        button, input { font-family: inherit; }
+        button, input, select { font-family: inherit; }
 
         .icon { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         .text-mrc { color: var(--mrc); }
@@ -105,13 +103,13 @@
             -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 80%);
         }
         .ambient-orb {
-            position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.15; z-index: -1; background: var(--mrc);
+            position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.12; z-index: -1; background: var(--mrc);
         }
 
         /* Glassmorphism Panel */
         .glass-panel {
             background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--glass-border); border-radius: 1.5rem; box-shadow: var(--glass-shadow);
+            border: 1px solid var(--glass-border); border-radius: 1rem; box-shadow: var(--glass-shadow);
         }
 
         /* Navigation */
@@ -121,129 +119,79 @@
         .nav-logo { display: flex; align-items: center; gap: 0.75rem; font-size: 1.25rem; font-weight: 900; letter-spacing: -0.05em; }
         .nav-logo img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--mrc); }
 
-        .system-status { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-muted); }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .system-status { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-family: var(--font-mono); color: var(--text-muted); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 10px var(--success); }
 
-        /* Two-Column Responsive Workspace Layout */
-        #list-view { padding-top: calc(var(--nav-height) + 5rem); max-width: 1200px; margin: 0 auto; position: relative; z-index: 10; min-height: 100vh; padding-bottom: 4rem;}
+        /* Core Layout Architecture */
+        #list-view { padding-top: calc(var(--nav-height) + 5rem); max-width: 1240px; margin: 0 auto; position: relative; z-index: 10; min-height: 100vh; padding-bottom: 4rem; }
         
-        .main-workspace { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; padding: 0 1.5rem; align-items: start; }
-        
-        @media (max-width: 1024px) {
-            .main-workspace { grid-template-columns: 1fr; }
+        .layout-container { display: flex; gap: 2rem; padding: 0 1.5rem; }
+
+        .content-area { flex: 1; }
+        .sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1.5rem; }
+
+        .blog-controls {
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;
+            margin-bottom: 2rem;
         }
 
-        /* Responsive Sidebar Filters */
-        .filter-sidebar { display: flex; flex-direction: column; gap: 1.5rem; position: sticky; top: calc(var(--nav-height) + 2rem); }
-        
-        @media (max-width: 1024px) {
-            .filter-sidebar {
-                position: fixed; top: 0; left: -320px; width: 300px; height: 100vh;
-                z-index: 1001; border-radius: 0; padding: 6rem 1.5rem 2rem;
-                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto;
-                background: rgba(9, 9, 11, 0.95);
-            }
-            .filter-sidebar.active { left: 0; }
-        }
-
-        .sidebar-section { padding: 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; }
-        .sidebar-title { font-size: 0.75rem; font-weight: 800; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; margin-bottom: 0.25rem; }
-
-        .search-box { position: relative; width: 100%; }
+        .search-box { position: relative; flex-grow: 1; max-width: 100%; }
         .search-box input {
-            width: 100%; padding: 0.8rem 1rem 0.8rem 2.5rem; border-radius: 99px;
+            width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; border-radius: 99px;
             background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
-            color: white; outline: none; transition: all 0.3s ease; font-family: inherit; font-size: 0.9rem;
+            color: white; outline: none; transition: all 0.3s ease; font-family: inherit;
         }
         .search-box input:focus { border-color: var(--mrc); background: rgba(244,66,52,0.03); box-shadow: 0 0 15px var(--mrc-glow); }
-        .search-box svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 1rem; }
+        .search-box svg { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 1.1rem; }
 
-        /* Box Filter Lists */
-        .box-filter-list { display: flex; flex-direction: column; gap: 0.5rem; }
-        .box-filter-item {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0.6rem 0.8rem; border-radius: 8px; background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--glass-border); cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
-        }
-        .box-filter-item:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.15); }
-        .box-filter-item.active { background: rgba(244, 66, 52, 0.1); border-color: rgba(244, 66, 52, 0.3); color: var(--mrc); }
-        .box-filter-count { font-size: 0.7rem; font-family: var(--font-mono); background: rgba(255, 255, 255, 0.08); padding: 0.15rem 0.4rem; border-radius: 4px; color: var(--text-muted); }
-        .box-filter-item.active .box-filter-count { background: rgba(244, 66, 52, 0.2); color: var(--mrc); }
+        .mobile-filter-btn { display: none; }
+
+        /* Sidebar Widgets */
+        .sidebar-widget { padding: 1.5rem; }
+        .sidebar-widget h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: 1rem; border-bottom: 1px dashed var(--glass-border); padding-bottom: 0.5rem; }
+        
+        .sidebar-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+        .sidebar-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; font-weight: 500; }
+        .sidebar-item:hover { background: rgba(255,255,255,0.04); color: white; }
+        .sidebar-item.active { background: rgba(244,66,52,0.08); color: var(--mrc); border-left: 3px solid var(--mrc); }
+        .sidebar-count { background: rgba(255,255,255,0.05); font-family: var(--font-mono); font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; color: var(--text-muted); }
 
         .tags-wrapper { display: flex; flex-wrap: wrap; gap: 0.5rem; }
         .tag {
             font-family: var(--font-mono); font-size: 0.7rem; padding: 0.4rem 0.8rem;
-            border-radius: 99px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+            border-radius: 99px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);
             color: var(--text-muted); cursor: pointer; transition: all 0.2s;
         }
-        .tag:hover { background: rgba(255,255,255,0.08); color: white; }
+        .tag:hover { background: rgba(255,255,255,0.08); color: white; border-color: rgba(255,255,255,0.2); }
         .tag.active { background: rgba(244,66,52,0.1); color: var(--mrc); border-color: rgba(244,66,52,0.3); }
 
-        /* Mobile filter trigger bar */
-        .mobile-filter-bar { display: none; justify-content: flex-end; padding: 0 1.5rem; margin-bottom: 1.5rem; }
-        @media (max-width: 1024px) { .mobile-filter-bar { display: flex; } }
-        
-        .cat-btn {
-            background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border);
-            padding: 0.8rem 1.5rem; border-radius: 99px; color: white; cursor: pointer;
-            display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; 
-            font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem;
-        }
-        .cat-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
-
-        .btn-clear-filters {
-            width: 100%; border: 1px solid var(--danger-glow); background: rgba(239, 68, 68, 0.05);
-            color: var(--danger); font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
-            padding: 0.6rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;
-        }
-        .btn-clear-filters:hover { background: var(--danger); color: white; }
-
-        /* Mobile Sidebar Backdrop Overlay */
-        .sidebar-backdrop {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-            z-index: 1000; display: none;
-        }
-        .sidebar-backdrop.active { display: block; }
-
-        /* Professional Cards Grid Layout */
-        .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; width: 100%; }
+        /* Blog Grid */
+        .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
         
         .card {
-            padding: 1.8rem; display: flex; flex-direction: column; cursor: pointer; 
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
-            position: relative; overflow: hidden; gap: 0.8rem;
+            padding: 1.8rem; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; background: rgba(24, 24, 27, 0.4);
         }
-        .card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-            background: linear-gradient(90deg, transparent, var(--mrc), transparent);
-            opacity: 0; transition: opacity 0.3s;
-        }
-        .card:hover::before { opacity: 1; }
-        .card:hover { transform: translateY(-5px); border-color: rgba(244, 66, 52, 0.4); box-shadow: 0 10px 30px rgba(244,66,52,0.08); }
+        .card:hover { transform: translateY(-5px); border-color: var(--mrc); box-shadow: 0 8px 24px rgba(244, 66, 52, 0.1); }
         
-        .card.status-not { cursor: not-allowed; opacity: 0.75; border-color: var(--danger-glow); }
+        .card.status-not { cursor: not-allowed; opacity: 0.7; border-color: var(--danger-glow); }
         .card.status-not:hover { transform: none; border-color: var(--danger); box-shadow: 0 0 20px var(--danger-glow); }
-        .card.status-not::before { background: linear-gradient(90deg, transparent, var(--danger), transparent); }
 
-        .card-category-tag { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mrc); }
-        .card-title { font-size: 1.4rem; font-weight: 800; line-height: 1.3; color: white; }
-        
-        .card-desc {
-            font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-            overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.5rem;
-        }
-
-        .card-meta-row {
-            margin-top: auto; border-top: 1px solid var(--glass-border); padding-top: 1rem;
-            display: flex; align-items: center; justify-content: space-between;
-            font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);
-        }
-        .card-status { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
+        .card-top-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .card-status { font-size: 0.62rem; font-weight: 800; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; padding: 0.3rem 0.6rem; border-radius: 4px; display: inline-block; }
         .status-pub { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
         .status-not { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
 
-        /* --- Full Clog Reader View --- */
+        .card-cat { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--mrc-light); letter-spacing: 0.05em; }
+        .card-title { font-size: 1.35rem; font-weight: 800; margin-bottom: 0.5rem; line-height: 1.3; color: white; }
+        .card-desc { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.5rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; border-top: 1px solid var(--glass-border); padding-top: 1rem; font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-muted); }
+
+        /* Configuration Diagnostic Panel overlay */
+        .config-bar { display: none; margin: 0 1.5rem 1.5rem 1.5rem; padding: 1rem; font-size: 0.85rem; border: 1px dashed var(--warn); background: rgba(245, 158, 11, 0.05); color: #fde68a; }
+        .config-bar span { font-weight: bold; }
+
+        /* --- Full Blog Reader View --- */
         #full-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-dark); z-index: 1000; overflow-y: auto; overflow-x: hidden;
@@ -252,7 +200,7 @@
         #full-view.active { opacity: 1; visibility: visible; transform: translateY(0); }
         
         .reader-nav {
-            position: sticky; top: 0; width: 100%; background: rgba(9,9,11,0.9);
+            position: sticky; top: 0; width: 100%; background: rgba(9, 9, 11, 0.9);
             backdrop-filter: blur(12px); border-bottom: 1px solid var(--glass-border);
             padding: 1rem 2rem; z-index: 101; display: flex; align-items: center;
         }
@@ -261,7 +209,7 @@
             padding: 0.6rem 1.2rem; border-radius: 99px; cursor: pointer; display: flex; align-items: center; gap: 8px;
             font-size: 0.8rem; font-weight: 700; text-transform: uppercase; transition: 0.3s;
         }
-        .back-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+        .back-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
         
         .reader-progress-container { position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: transparent; }
         .reader-progress { height: 100%; width: 0%; background: var(--mrc); box-shadow: 0 0 10px var(--mrc-glow); }
@@ -269,48 +217,48 @@
         .article-container { max-width: 800px; margin: 0 auto; padding: 4rem 1.5rem 8rem; }
         .hero-img { width: 100%; height: 400px; object-fit: cover; border-radius: 1.5rem; margin-bottom: 2.5rem; border: 1px solid var(--glass-border); }
         
-        .article-title { font-size: clamp(2.2rem, 5vw, 3.8rem); font-weight: 900; line-height: 1.1; margin-bottom: 1rem; letter-spacing: -0.02em; }
-        .article-meta { display: flex; align-items: center; gap: 1rem; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.85rem; padding-bottom: 2rem; border-bottom: 1px solid var(--glass-border); margin-bottom: 2rem; }
+        .article-title { font-size: clamp(2.3rem, 5vw, 3.8rem); font-weight: 900; line-height: 1.1; margin-bottom: 1rem; letter-spacing: -0.02em; color: white; }
+        .article-meta { display: flex; flex-wrap: wrap; gap: 1rem 2rem; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.85rem; padding-bottom: 2rem; border-bottom: 1px solid var(--glass-border); margin-bottom: 2rem; }
 
-        /* Markdown Post Content Styles mapped safely over the Github Markdown CSS */
+        /* Markdown Overrides to fit Theme styling */
         .markdown-body {
-            background: transparent !important; color: #e2e8f0 !important;
-            font-family: var(--font-sans) !important; font-size: 1.1rem !important; line-height: 1.8 !important;
+            box-sizing: border-box; min-width: 200px; max-width: 980px; margin: 0 auto; padding: 0;
+            background: transparent !important; color: #cbd5e1 !important; font-family: var(--font-sans) !important;
+            font-size: 1.05rem; line-height: 1.8;
         }
-        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { color: #fff !important; font-weight: 800 !important; font-family: var(--font-sans) !important; border-bottom: 1px solid var(--glass-border) !important; padding-bottom: 0.3em !important; }
-        .markdown-body h1 { font-size: 2.25rem !important; }
-        .markdown-body h2 { font-size: 1.8rem !important; margin-top: 2.5rem !important; }
-        .markdown-body h3 { font-size: 1.4rem !important; }
-        .markdown-body p { margin-bottom: 1.5rem !important; }
-        
-        .markdown-body a { color: var(--mrc) !important; text-decoration: underline !important; text-decoration-color: rgba(244,66,52,0.3) !important; text-underline-offset: 4px !important; }
-        .markdown-body a:hover { text-decoration-color: var(--mrc) !important; }
-        
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { color: #fff !important; font-weight: 800; border-bottom-color: var(--glass-border) !important; }
+        .markdown-body h2 { font-size: 1.8rem; margin-top: 2.5rem; padding-bottom: 0.3rem; }
+        .markdown-body h3 { font-size: 1.4rem; }
+        .markdown-body p { margin-bottom: 1.5rem; }
+        .markdown-body a { color: var(--mrc) !important; text-decoration: underline; text-underline-offset: 4px; }
+        .markdown-body a:hover { color: var(--mrc-light) !important; }
         .markdown-body pre { background-color: #000 !important; border: 1px solid var(--glass-border) !important; border-radius: 1rem !important; padding: 1.5rem !important; }
-        .markdown-body code { font-family: var(--font-mono) !important; background-color: rgba(255,255,255,0.08) !important; color: #f1f5f9 !important; padding: 0.2rem 0.4rem !important; border-radius: 4px !important; }
-        .markdown-body pre code { background: transparent !important; padding: 0 !important; border-radius: 0 !important; }
-        
-        .markdown-body blockquote { border-left: 4px solid var(--mrc) !important; color: var(--text-muted) !important; background: rgba(255,255,255,0.01) !important; border-radius: 0 8px 8px 0 !important; }
-        .markdown-body img { border-radius: 1rem !important; border: 1px solid var(--glass-border) !important; margin: 2rem 0 !important; }
-        .markdown-body hr { background-color: var(--glass-border) !important; height: 1px !important; }
-        .markdown-body table tr { background-color: #0d0d0f !important; border-top: 1px solid var(--glass-border) !important; }
-        .markdown-body table tr:nth-child(2n) { background-color: #141417 !important; }
-        .markdown-body table th, .markdown-body table td { border: 1px solid var(--glass-border) !important; padding: 0.8rem 1rem !important; }
-        .markdown-body table th { background: rgba(255,255,255,0.03) !important; color: white !important; }
+        .markdown-body code { background-color: rgba(255, 255, 255, 0.08) !important; color: #f8fafc !important; font-family: var(--font-mono) !important; font-size: 0.85em !important; border-radius: 4px; padding: 0.2rem 0.4rem !important; }
+        .markdown-body pre code { background: transparent !important; padding: 0 !important; border-radius: 0; }
+        .markdown-body blockquote { border-left: 4px solid var(--mrc) !important; color: var(--text-muted) !important; padding-left: 1.5rem !important; margin: 2rem 0 !important; font-style: italic; }
+        .markdown-body img { border-radius: 1rem; border: 1px solid var(--glass-border); margin: 2rem auto; display: block; }
+        .markdown-body table tr { background-color: var(--bg-dark) !important; border-top-color: var(--glass-border) !important; }
+        .markdown-body table tr:nth-child(2n) { background-color: var(--bg-surface) !important; }
+        .markdown-body table td, .markdown-body table th { border-color: var(--glass-border) !important; padding: 0.75rem 1rem !important; }
+        .markdown-body table th { color: #fff !important; background-color: rgba(255, 255, 255, 0.04) !important; }
 
-        /* Custom Callout styling (retained for backward markup compatibility) */
-        .markdown-body .note, .markdown-body .warn, .markdown-body .success {
-            padding: 1.5rem; border-radius: 1rem; margin: 2rem 0; border-left: 4px solid; background: rgba(255,255,255,0.02); backdrop-filter: blur(10px);
-        }
-        .markdown-body .note { border-color: var(--info); color: #bfdbfe; }
-        .markdown-body .warn { border-color: var(--warn); color: #fde68a; }
-        .markdown-body .success { border-color: var(--success); color: #a7f3d0; }
-
-        /* Scrollbar */
+        /* Scrollbars */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-dark); }
         ::-webkit-scrollbar-thumb { background: rgba(244, 66, 52, 0.5); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--mrc); }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1023px) {
+            .layout-container { flex-direction: column; }
+            .sidebar { width: 100%; display: none; order: -1; }
+            .sidebar.active-mobile { display: flex; }
+            
+            .blog-controls { gap: 0.75rem; }
+            .search-box { flex-basis: 100%; }
+            .mobile-filter-btn { display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); padding: 0.8rem 1.5rem; border-radius: 99px; color: white; cursor: pointer; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; gap: 0.5rem; transition: 0.2s; flex-grow: 1; }
+            .mobile-filter-btn:hover { background: rgba(255,255,255,0.06); }
+        }
     </style>
 </head>
 <body>
@@ -327,24 +275,21 @@
     <!-- Initial Loader -->
     <div id="loader">
         <div class="loader-ring"></div>
-        <div class="font-mono text-mrc font-bold tracking-widest text-sm uppercase">Fetching Logs...</div>
+        <div class="font-mono text-mrc font-bold tracking-widest text-sm uppercase">Loading Repository Logs...</div>
     </div>
 
     <!-- Ambient Backgrounds -->
     <div class="tech-grid"></div>
     <div class="ambient-orb" style="width: 40vw; height: 40vw; top: -10%; left: -10%;"></div>
 
-    <!-- Mobile Drawer Backdrop -->
-    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
-
     <!-- Navigation -->
     <header class="header" id="navbar">
         <div class="nav-bar glass-panel">
-            <a href="/" class="nav-logo">
+            <a href="./" class="nav-logo" id="home-link">
                 <img src="https://avatars.githubusercontent.com/u/249983472" alt="MRC Logo">
                 <span style="color:var(--text-main);">MainRoute <span class="text-mrc">Core</span></span>
             </a>
-            <div class="system-status" style="display:none;" id="desktop-status">
+            <div class="system-status" id="system-status">
                 <div class="status-dot"></div> Logs Online
             </div>
         </div>
@@ -352,54 +297,47 @@
 
     <!-- Main List View -->
     <main id="list-view">
-        <div style="text-align: center; margin-bottom: 3rem; padding: 0 1.5rem;">
-            <h1 class="font-black uppercase" style="font-size: clamp(3rem, 6vw, 5rem); letter-spacing: -0.05em; line-height: 1;">The Core <span class="text-mrc">Log.</span></h1>
-            <p class="text-muted mt-2">Technical deep-dives, architecture updates, and engineering logs.</p>
+        <div style="text-align: center; margin-bottom: 3.5rem; padding: 0 1.5rem;">
+            <h1 class="font-black uppercase" style="font-size: clamp(2.8rem, 6vw, 4.8rem); letter-spacing: -0.05em; line-height: 1; color: white;">The Core <span class="text-mrc">Log.</span></h1>
+            <p class="text-muted mt-2" style="font-size: 1.05rem;">Engineering documentation, architectural blueprints, and diagnostic updates.</p>
         </div>
 
-        <!-- Mobile Filter Action Bar -->
-        <div class="mobile-filter-bar">
-            <button class="cat-btn" onclick="toggleMobileSidebar()">
-                <svg class="icon"><use href="#icon-filter"></use></svg> Filter Logs
-            </button>
+        <!-- Local Diagnostic Fallback Notice -->
+        <div id="local-diagnostic-bar" class="config-bar glass-panel">
+            <span>Environment Diagnostic Notice:</span> CORS rules prevent loading local metadata under the <code>file://</code> protocol. Launching a local server or deploying to GitHub fixes this.
         </div>
 
-        <div class="main-workspace">
-            <!-- Sidebar with Filters (Adaptive Sideboxes) -->
-            <aside class="filter-sidebar glass-panel" id="filter-sidebar">
-                <div class="sidebar-section">
-                    <h4 class="sidebar-title">Search Workspace</h4>
-                    <div class="search-box">
-                        <svg class="icon"><use href="#icon-search"></use></svg>
-                        <input type="text" id="search" placeholder="Query terms, tags...">
-                    </div>
+        <div class="layout-container">
+            <!-- Sidebar (Desktop left sidebar / Mobile accordion) -->
+            <aside class="sidebar" id="sidebar-filters">
+                <div class="sidebar-widget glass-panel">
+                    <h3>Categories</h3>
+                    <ul class="sidebar-list" id="category-list">
+                        <!-- Dynamic Categories Injection -->
+                    </ul>
                 </div>
-
-                <div class="sidebar-section">
-                    <h4 class="sidebar-title">Categories</h4>
-                    <div id="category-box-list" class="box-filter-list">
-                        <!-- Populated by JS -->
+                <div class="sidebar-widget glass-panel">
+                    <h3>Tags</h3>
+                    <div class="tags-wrapper" id="tag-cloud">
+                        <!-- Dynamic Tag Injection -->
                     </div>
-                </div>
-
-                <div class="sidebar-section">
-                    <h4 class="sidebar-title">Sub-Categories / Tags</h4>
-                    <div id="tag-box-list" class="tags-wrapper">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-
-                <div class="sidebar-section" id="active-filters-sec" style="display: none;">
-                    <button class="btn-clear-filters" onclick="clearAllFilters()">
-                        <span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:4px;">clear_all</span> Clear Filters
-                    </button>
                 </div>
             </aside>
 
-            <!-- Main Log Cards Area -->
+            <!-- Main Blog Grid area -->
             <section class="content-area">
+                <div class="blog-controls">
+                    <div class="search-box">
+                        <svg class="icon"><use href="#icon-search"></use></svg>
+                        <input type="text" id="search" placeholder="Search architecture, terms, tags...">
+                    </div>
+                    <button class="mobile-filter-btn" id="mobile-filter-toggle">
+                        <svg class="icon"><use href="#icon-filter"></use></svg> Filter Panel
+                    </button>
+                </div>
+
                 <div class="blog-grid" id="grid">
-                    <!-- JS Injection -->
+                    <!-- Dynamic Grid Card Injections -->
                 </div>
             </section>
         </div>
@@ -416,337 +354,419 @@
             </div>
         </div>
 
-        <div class="article-container" id="articleBody">
-            <!-- JS Injection -->
-        </div>
+        <article class="article-container" id="articleBody">
+            <!-- Dynamic Markdown Compiled HTML Injection -->
+        </article>
     </div>
 
-    <!-- VANILLA JS SPA LOGIC -->
+    <!-- VANILLA JS APP CONTROL LOGIC -->
     <script>
-        // High-Performance Configurable Cloud Sync URLs
-        const GITHUB_OWNER = "MainRoute-Core";
-        const GITHUB_REPO = "blog";
-        const INDEX_BRANCH = "output";        // Branch holding the index array file (db.json / blogs.json)
-        const INDEX_FILE = "blogs.json";          // Database JSON structure
-        const CONTENT_BRANCH = "main";         // Branch holding individual JSON bodies
-        const CONTENT_SUBFOLDER = "blogs";     // sub-folder holding individual raw blog posts
-
-        const INDEX_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${INDEX_BRANCH}/${INDEX_FILE}`;
-        const CONTENT_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${CONTENT_BRANCH}/${CONTENT_SUBFOLDER}/`;
+        // --- 1. CONFIGURATION INTERACTION PATHS ---
+        // Dynamically detects if run inside a local workspace environment or on a server
+        const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const isLocalFile = window.location.protocol === 'file:';
         
+        // Target paths configurations (Modify these parameters for specific GitHub repositories)
+        const DEFAULT_GITHUB_INDEX = "https://raw.githubusercontent.com/MainRoute-Core/blog/output/blogs.json";
+        const DEFAULT_GITHUB_CDN_BASE = "https://cdn.jsdelivr.net/gh/MainRoute-Core/blog@main/";
+
+        const INDEX_URL = (isLocalHost) ? './blogs.json' : DEFAULT_GITHUB_INDEX;
+        const CONTENT_BASE_URL = (isLocalHost) ? './' : DEFAULT_GITHUB_CDN_BASE;
+
         let allBlogs = [];
         let activeCategory = null;
         let activeTag = null;
-        let searchQuery = "";
+        let activeSearchQuery = "";
 
-        // 1. Initialization & Fetching
+        // Establish GFM compliant options for marked parser
+        if (window.marked) {
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false
+            });
+        }
+
+        // --- 2. BASE INITIALIZATION & FETCH ROUTING ---
         async function initApp() {
+            // Visual indicators for diagnostic modes
+            if (isLocalFile) {
+                document.getElementById('local-diagnostic-bar').style.display = 'block';
+            }
+
             try {
-                const res = await fetch(INDEX_URL);
+                let res;
+                try {
+                    res = await fetch(INDEX_URL);
+                } catch (fetchErr) {
+                    // Fallback to github fetch index if running locally but files are absent
+                    if (isLocalHost || isLocalFile) {
+                        console.warn("Local logs index not discovered. Routing fetch query to remote GitHub CDN fallback...");
+                        res = await fetch(DEFAULT_GITHUB_INDEX);
+                    } else {
+                        throw fetchErr;
+                    }
+                }
+
+                if (!res.ok) throw new Error("Metadata response query failed.");
                 const rawData = await res.json();
                 
-                // Exclude unpublished blogs
-                allBlogs = rawData.filter(b => b.Status !== 'Un');
+                // Schema Normalization and Unpublished ('Un') removal
+                allBlogs = rawData
+                    .map(normalizeSchema)
+                    .filter(b => b.Status !== 'Un');
                 
-                // Set Up initial UI render
-                applyFiltersAndRender();
-                buildSidebarSelectors();
-                checkUrlRouting();
+                // Configure elements and apply URL state query parameters
+                syncUrlParams();
+                renderSidebarCategories();
+                renderSidebarTags();
+                applyFiltersAndSearch(false);
+                
+                // Bind home link to safely restore navigation states
+                document.getElementById('home-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    resetFilters();
+                });
+
             } catch (err) {
-                console.error(err);
-                document.getElementById('grid').innerHTML = '<p class="text-mrc text-center" style="grid-column: 1/-1; padding:3rem;">Failed to fetch core logs. System offline.</p>';
+                console.error("Index load aborted:", err);
+                document.getElementById('grid').innerHTML = `
+                    <div style="grid-column: 1/-1; padding: 4rem 1.5rem; text-align: center;">
+                        <p class="text-mrc font-bold">Failed to load Core indexes.</p>
+                        <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.9rem;">
+                            Verify if <code>blogs.json</code> path index matches or verify network state options.
+                        </p>
+                    </div>
+                `;
             } finally {
                 setTimeout(() => {
                     document.getElementById('loader').classList.add('hidden');
-                    document.getElementById('desktop-status').style.display = 'flex';
-                }, 300);
+                }, 400);
             }
         }
 
-        // 2. Adaptive Multi-layer Filter Pipeline
-        function applyFiltersAndRender() {
-            const filtered = allBlogs.filter(b => {
-                const title = (b.Title || b.Name || "").toLowerCase();
-                const desc = (b.Desc || "").toLowerCase();
-                const author = (b.Author || "").toLowerCase();
-                const cats = (b.Categories || b.Cat || []).map(c => c.toLowerCase());
-                const tags = (b.Tags || []).map(t => t.toLowerCase());
-
-                const matchesQuery = !searchQuery || 
-                    title.includes(searchQuery) || 
-                    desc.includes(searchQuery) ||
-                    author.includes(searchQuery) ||
-                    cats.some(c => c.includes(searchQuery)) ||
-                    tags.some(t => t.includes(searchQuery));
-
-                const matchesCategory = !activeCategory || 
-                    cats.includes(activeCategory.toLowerCase());
-
-                const matchesTag = !activeTag || 
-                    tags.includes(activeTag.toLowerCase());
-
-                return matchesQuery && matchesCategory && matchesTag;
-            });
-
-            renderGrid(filtered);
-            updateSidebarUIState();
+        // --- 3. DATABASE SCHEMA SANITIZATION ---
+        // Keeps both old Builder indices and the Upgraded Clog Builder outputs functional
+        function normalizeSchema(b) {
+            return {
+                Title: b.Title || b.Name || "Untitled Post",
+                Desc: b.Desc || b.Description || "No logs summary metadata compiled.",
+                Author: b.Author || "SYSTEM CORE",
+                Id: b.Id || b.Article || "",
+                Tags: Array.isArray(b.Tags) ? b.Tags : (b.SubCat ? b.SubCat : (b.Tags ? b.Tags.split(',').map(s=>s.trim()) : [])),
+                Categories: Array.isArray(b.Categories) ? b.Categories : (b.Cat ? b.Cat : (b.Categories ? [b.Categories] : [])),
+                Date: b.Date || "Unknown Date",
+                Img: b.Img || b.Image || "",
+                Status: b.Status || "Pub",
+                Url: b.Url || `blogs/${b.Id || b.Article}.json`
+            };
         }
 
-        // 3. Render Grid Cards (Old look updated to a more premium professional design)
+        // --- 4. RENDER PROCEDURES ---
         function renderGrid(data) {
             const grid = document.getElementById('grid');
             
-            if(data.length === 0) {
-                grid.innerHTML = '<p class="text-muted text-center" style="grid-column: 1/-1; padding: 5rem;">No logs found matching filter criteria.</p>';
+            if (data.length === 0) {
+                grid.innerHTML = '<p class="text-muted text-center" style="grid-column: 1/-1; padding: 5rem 0;">No active logs found matching configuration variables.</p>';
                 return;
             }
 
             grid.innerHTML = data.map(b => {
-                const isNot = b.Status === 'Not';
-                const cardClass = isNot ? 'card glass-panel status-not' : 'card glass-panel';
+                const isNotReady = b.Status === 'Not';
+                const cardClass = isNotReady ? 'card glass-panel status-not' : 'card glass-panel';
+                const statusBadge = isNotReady 
+                    ? `<span class="card-status status-not"><svg class="icon" style="width:10px; height:10px; display:inline; margin-right:4px;"><use href="#icon-lock"></use></svg> Classified</span>` 
+                    : `<span class="card-status status-pub"><svg class="icon" style="width:10px; height:10px; display:inline; margin-right:4px;"><use href="#icon-book-open"></use></svg> Published</span>`;
                 
-                // Map auto properties to accommodate old / new JSON outputs safely
-                const title = b.Title || b.Name || "Untitled Core Log";
-                const desc = b.Desc || "No summary provided for this engineering log entry.";
-                const id = b.Id || b.Article || "";
-                const date = b.Date || "Unknown Date";
-                const cats = b.Categories || b.Cat || [];
-                
-                const primaryCategory = cats.length > 0 ? cats[0] : "General";
-
-                const statusHtml = isNot 
-                    ? `<span class="card-status status-not"><svg class="icon" style="width:10px; height:10px;"><use href="#icon-lock"></use></svg> Classified</span>` 
-                    : `<span class="card-status status-pub"><svg class="icon" style="width:10px; height:10px;"><use href="#icon-book-open"></use></svg> Open Log</span>`;
-                
-                const clickEvent = isNot ? '' : `onclick="openArticle('${id}')"`;
+                const clickEvent = isNotReady ? '' : `onclick="openArticle('${b.Id}')"`;
+                const mainCategory = b.Categories[0] || "LOGS";
 
                 return `
                 <div class="${cardClass}" ${clickEvent}>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="card-category-tag">${primaryCategory}</span>
-                        ${statusHtml}
+                    <div class="card-top-info">
+                        ${statusBadge}
+                        <span class="card-cat">${mainCategory}</span>
                     </div>
-                    <h2 class="card-title">${title}</h2>
-                    <p class="card-desc">${desc}</p>
-                    <div class="card-meta-row">
-                        <span>DATE: ${date}</span>
-                        <span>BY: ${b.Author || "MRC CORE"}</span>
+                    <h2 class="card-title">${b.Title}</h2>
+                    <p class="card-desc">${b.Desc}</p>
+                    <div class="card-meta">
+                        <span>DATE: ${b.Date}</span>
+                        <span>BY: ${b.Author}</span>
                     </div>
                 </div>`;
             }).join('');
         }
 
-        // 4. Sidebar Aggregation and Rendering
-        function buildSidebarSelectors() {
-            // Count category frequencies safely
-            const catCounts = {};
-            const tagCounts = {};
-
-            allBlogs.forEach(b => {
-                const cats = b.Categories || b.Cat || [];
-                const tags = b.Tags || [];
-
-                cats.forEach(c => catCounts[c] = (catCounts[c] || 0) + 1);
-                tags.forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1);
-            });
-
-            // Populate Category Sidebox
-            const catContainer = document.getElementById('category-box-list');
-            let catHtml = `<div class="box-filter-item active" id="cat-all" onclick="selectCategory(null)">
-                <span>All Categories</span>
-                <span class="box-filter-count">${allBlogs.length}</span>
-            </div>`;
-
-            Object.keys(catCounts).sort().forEach(cat => {
-                catHtml += `<div class="box-filter-item" id="cat-${cat.replace(/\s+/g, '-')}" onclick="selectCategory('${cat}')">
-                    <span>${cat}</span>
-                    <span class="box-filter-count">${catCounts[cat]}</span>
-                </div>`;
-            });
-            catContainer.innerHTML = catHtml;
-
-            // Populate Tags cloud
-            const tagContainer = document.getElementById('tag-box-list');
-            let tagHtml = `<span class="tag active" id="tag-all" onclick="selectTag(null)">All Tags</span>`;
+        function renderSidebarCategories() {
+            const listContainer = document.getElementById('category-list');
             
-            Object.keys(tagCounts).sort().forEach(tag => {
-                tagHtml += `<span class="tag" id="tag-${tag.replace(/\s+/g, '-')}" onclick="selectTag('${tag}')">#${tag}</span>`;
+            // Build unique category inventory with counts mapping
+            const catMap = {};
+            allBlogs.forEach(b => {
+                b.Categories.forEach(cat => {
+                    catMap[cat] = (catMap[cat] || 0) + 1;
+                });
             });
-            tagContainer.innerHTML = tagHtml;
+
+            let listHtml = `
+                <li class="sidebar-item ${!activeCategory ? 'active' : ''}" onclick="selectCategory(null)">
+                    <span>All System Logs</span>
+                    <span class="sidebar-count">${allBlogs.length}</span>
+                </li>
+            `;
+
+            for (const [cat, count] of Object.entries(catMap)) {
+                const isActive = (activeCategory === cat) ? 'active' : '';
+                listHtml += `
+                    <li class="sidebar-item ${isActive}" onclick="selectCategory('${cat}')">
+                        <span>${cat}</span>
+                        <span class="sidebar-count">${count}</span>
+                    </li>
+                `;
+            }
+
+            listContainer.innerHTML = listHtml;
         }
 
-        // Interaction actions
-        window.selectCategory = function(cat) {
+        function renderSidebarTags() {
+            const cloudContainer = document.getElementById('tag-cloud');
+            const tagsSet = new Set();
+            allBlogs.forEach(b => b.Tags.forEach(t => tagsSet.add(t)));
+
+            let tagsHtml = `
+                <span class="tag ${!activeTag ? 'active' : ''}" onclick="selectTag(null)">#all</span>
+            `;
+
+            tagsSet.forEach(t => {
+                const isActive = (activeTag === t) ? 'active' : '';
+                tagsHtml += `
+                    <span class="tag ${isActive}" onclick="selectTag('${t}')">#${t}</span>
+                `;
+            });
+
+            cloudContainer.innerHTML = tagsHtml;
+        }
+
+        // --- 5. SEARCH & INTERACTIVE FILTER LOGIC ---
+        function selectCategory(cat) {
             activeCategory = cat;
-            applyFiltersAndRender();
-        };
+            renderSidebarCategories();
+            applyFiltersAndSearch(true);
+            
+            // Smooth scroll up to list start on mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar-filters').classList.remove('active-mobile');
+            }
+        }
 
-        window.selectTag = function(tag) {
+        function selectTag(tag) {
             activeTag = tag;
-            applyFiltersAndRender();
-        };
+            renderSidebarTags();
+            applyFiltersAndSearch(true);
 
-        window.clearAllFilters = function() {
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar-filters').classList.remove('active-mobile');
+            }
+        }
+
+        function resetFilters() {
             activeCategory = null;
             activeTag = null;
-            searchQuery = "";
+            activeSearchQuery = "";
             document.getElementById('search').value = "";
-            applyFiltersAndRender();
-        };
+            renderSidebarCategories();
+            renderSidebarTags();
+            applyFiltersAndSearch(true);
+            closeArticle(true);
+        }
 
-        // Update the visual selection state of selectors dynamically
-        function updateSidebarUIState() {
-            // Highlight Categories
-            document.querySelectorAll('#category-box-list .box-filter-item').forEach(item => item.classList.remove('active'));
+        function applyFiltersAndSearch(pushToHistory = true) {
+            let processed = [...allBlogs];
+
             if (activeCategory) {
-                const targetId = `cat-${activeCategory.replace(/\s+/g, '-')}`;
-                const targetEl = document.getElementById(targetId);
-                if (targetEl) targetEl.classList.add('active');
-            } else {
-                document.getElementById('cat-all').classList.add('active');
+                processed = processed.filter(b => b.Categories.includes(activeCategory));
             }
 
-            // Highlight Tags
-            document.querySelectorAll('#tag-box-list .tag').forEach(item => item.classList.remove('active'));
             if (activeTag) {
-                const targetId = `tag-${activeTag.replace(/\s+/g, '-')}`;
-                const targetEl = document.getElementById(targetId);
-                if (targetEl) targetEl.classList.add('active');
-            } else {
-                document.getElementById('tag-all').classList.add('active');
+                processed = processed.filter(b => b.Tags.includes(activeTag));
             }
 
-            // Control the Clear Filter action viability
-            const clearBtnSec = document.getElementById('active-filters-sec');
-            if (activeCategory || activeTag || searchQuery) {
-                clearBtnSec.style.display = 'block';
-            } else {
-                clearBtnSec.style.display = 'none';
+            if (activeSearchQuery) {
+                const query = activeSearchQuery.toLowerCase();
+                processed = processed.filter(b => 
+                    b.Title.toLowerCase().includes(query) ||
+                    b.Desc.toLowerCase().includes(query) ||
+                    b.Author.toLowerCase().includes(query) ||
+                    b.Tags.some(t => t.toLowerCase().includes(query)) ||
+                    b.Categories.some(c => c.toLowerCase().includes(query))
+                );
+            }
+
+            renderGrid(processed);
+
+            if (pushToHistory) {
+                updateUrlParams();
             }
         }
 
-        // Live typing search observer
+        // Real-time search query inputs bind
         document.getElementById('search').addEventListener('input', (e) => {
-            searchQuery = e.target.value.toLowerCase().trim();
-            applyFiltersAndRender();
+            activeSearchQuery = e.target.value.trim();
+            applyFiltersAndSearch(true);
         });
 
-        // Mobile responsive UI toggle
-        window.toggleMobileSidebar = function() {
-            document.getElementById('filter-sidebar').classList.toggle('active');
-            document.getElementById('sidebar-backdrop').classList.toggle('active');
-        };
+        // Toggle filters dashboard on mobile
+        document.getElementById('mobile-filter-toggle').addEventListener('click', () => {
+            document.getElementById('sidebar-filters').classList.toggle('active-mobile');
+        });
 
-        // 5. Routing & Article Loading Logic (Refined)
-        function checkUrlRouting() {
+        // --- 6. ROUTING & URL SYNC CONTROL STATE ---
+        function syncUrlParams() {
             const params = new URLSearchParams(window.location.search);
-            const articleId = params.get('log');
-            if (articleId) {
-                openArticle(articleId, false);
+            const query = params.get('q');
+            const category = params.get('cat');
+            const tag = params.get('tag');
+            const logId = params.get('log');
+
+            if (query) {
+                activeSearchQuery = query;
+                document.getElementById('search').value = query;
+            }
+            if (category) activeCategory = category;
+            if (tag) activeTag = tag;
+
+            if (logId) {
+                openArticle(logId, false);
             }
         }
 
+        function updateUrlParams() {
+            const params = new URLSearchParams();
+            if (activeSearchQuery) params.set('q', activeSearchQuery);
+            if (activeCategory) params.set('cat', activeCategory);
+            if (activeTag) params.set('tag', activeTag);
+            
+            const currentLog = new URLSearchParams(window.location.search).get('log');
+            if (currentLog) params.set('log', currentLog);
+
+            const searchStr = params.toString();
+            const newUrl = searchStr ? `?${searchStr}` : window.location.pathname;
+            window.history.replaceState({ activeCategory, activeTag, activeSearchQuery }, '', newUrl);
+        }
+
+        // --- 7. DEEP ARTICLE LOAD & RENDERING ENGINE ---
         async function openArticle(id, pushState = true) {
-            // Retrieve item mapping using both Id and Article fallback checks
-            const blogMeta = allBlogs.find(b => (b.Id === id || b.Article === id));
-            if (!blogMeta) return;
+            const blog = allBlogs.find(b => b.Id === id);
+            if (!blog) return;
 
-            const title = blogMeta.Title || blogMeta.Name || "Untitled";
-
+            // Push article log variables to parameter structures
             if (pushState) {
-                window.history.pushState({ id }, title, `?log=${id}`);
+                const params = new URLSearchParams(window.location.search);
+                params.set('log', id);
+                window.history.pushState({ id }, blog.Title, `?${params.toString()}`);
             }
 
             const loader = document.getElementById('loader');
             loader.classList.remove('hidden');
 
             try {
-                // If the indexing database has the data loaded, avoid double fetches
-                if (blogMeta.Data && blogMeta.Data.trim().length > 0) {
-                    renderFullArticle(blogMeta);
-                } else {
-                    // Fetch dynamic JSON body file using fallback mapping
-                    const targetFile = blogMeta.Url || `${id}.json`;
-                    const res = await fetch(CONTENT_BASE_URL + targetFile);
-                    if (!res.ok) throw new Error("JSON asset could not be resolved from cloud repository.");
-                    
-                    const articleData = await res.json();
-                    renderFullArticle(articleData);
+                let targetUrl = `${CONTENT_BASE_URL}${blog.Url}`;
+                let res;
+                try {
+                    res = await fetch(targetUrl);
+                } catch (fetchErr) {
+                    // Failover path diagnostics for localhost checks
+                    if (isLocalHost || isLocalFile) {
+                        const directLocalPath = `./${blog.Url}`;
+                        console.warn(`Local file target unreachable via remote path. Trying alternative mapping: ${directLocalPath}`);
+                        res = await fetch(directLocalPath);
+                    } else {
+                        throw fetchErr;
+                    }
                 }
 
-                // Smoothly trigger Reader interface transition
+                if (!res.ok) throw new Error("Document retrieval failure.");
+                const post = await res.json();
+                
+                renderFullPost(post, blog);
+
+                // Reveal full article overlay
                 document.getElementById('full-view').classList.add('active');
                 document.getElementById('full-view').scrollTo(0, 0);
                 document.body.style.overflow = 'hidden';
 
             } catch (err) {
-                console.error(err);
-                alert("Core System Error: Failed to retrieve complete log document.");
+                console.error("Reader load aborted:", err);
+                alert("Core System Error: Failed to retrieve or parse targeted log. Target resource may be missing.");
             } finally {
                 loader.classList.add('hidden');
-                // Ensure mobile drawer collapses on read
-                document.getElementById('filter-sidebar').classList.remove('active');
-                document.getElementById('sidebar-backdrop').classList.remove('active');
             }
         }
 
-        // 6. Complete Dynamic Markdown Rendering (Upgrade from old TinyMCE HTML logic)
-        function renderFullArticle(data) {
+        function renderFullPost(post, metadata) {
             const container = document.getElementById('articleBody');
             
-            const title = data.Title || data.Name || "Untitled Core Log";
-            const date = data.Date || "Unknown Date";
-            const author = data.Author || "MRC CORE";
-            const img = data.Img || "";
-            const bodyContent = data.Data || "";
+            const title = post.Title || metadata.Title;
+            const date = post.Date || metadata.Date;
+            const author = post.Author || metadata.Author;
+            const banner = post.Img || metadata.Img;
 
-            const imgHtml = img 
-                ? `<img src="${img}" alt="Hero Image" class="hero-img" onerror="this.style.display='none'">` 
+            const bannerHtml = banner 
+                ? `<img src="${banner}" alt="Hero Image" class="hero-img" onerror="this.style.display='none'">` 
                 : '';
 
-            // Output container HTML setup
+            // Extract content from schema output configurations
+            const rawBodyMarkdown = post.Data || post.content || "";
+            let htmlContent = "";
+
+            if (window.marked) {
+                htmlContent = marked.parse(rawBodyMarkdown);
+            } else {
+                htmlContent = `<p class="text-mrc">Markdown rendering parser (marked.js) was blocked from execution. Raw Data:</p><pre>${rawBodyMarkdown}</pre>`;
+            }
+
             container.innerHTML = `
-                ${imgHtml}
+                ${bannerHtml}
                 <h1 class="article-title">${title}</h1>
                 <div class="article-meta">
                     <span><strong style="color:var(--text-main)">DATE:</strong> ${date}</span>
                     <span><strong style="color:var(--text-main)">AUTHOR:</strong> ${author}</span>
                 </div>
-                <div class="blog-content markdown-body" id="rendered-md-body">
-                    <!-- Markdown injected safely here -->
+                <div class="markdown-body">
+                    ${htmlContent || '<p class="text-muted">Empty log context payload received.</p>'}
                 </div>
             `;
+        }
 
-            // Utilize Marked.js for fast compiler compilation
-            const mdBox = document.getElementById('rendered-md-body');
-            if (window.marked) {
-                mdBox.innerHTML = marked.parse(bodyContent);
-            } else {
-                mdBox.innerHTML = `<p class="text-muted font-mono">Rendering processor not loaded. Raw MD fallback:</p><pre>${bodyContent}</pre>`;
+        function closeArticle(pushState = true) {
+            document.getElementById('full-view').classList.remove('active');
+            document.body.style.overflow = ''; // Release scroll lock
+            
+            if (pushState) {
+                const params = new URLSearchParams(window.location.search);
+                params.delete('log');
+                const searchStr = params.toString();
+                const newUrl = searchStr ? `?${searchStr}` : window.location.pathname;
+                window.history.pushState({}, '', newUrl);
             }
         }
 
-        // 7. Navigation & SPA Flow Controllers
+        // Navigation back button click bind
         document.getElementById('backBtn').addEventListener('click', () => closeArticle(true));
 
+        // Window browser navigation popstate tracking bind
         window.addEventListener('popstate', (e) => {
-            if (e.state && e.state.id) {
-                openArticle(e.state.id, false);
+            const params = new URLSearchParams(window.location.search);
+            const logId = params.get('log');
+            if (logId) {
+                openArticle(logId, false);
             } else {
                 closeArticle(false);
             }
         });
 
-        function closeArticle(pushState = true) {
-            document.getElementById('full-view').classList.remove('active');
-            document.body.style.overflow = '';
-            
-            if (pushState) {
-                window.history.pushState({}, '', window.location.pathname);
-            }
-        }
-
-        // Scrolling dynamics calculation
+        // Reader Scroll Progress Engine
         const fullView = document.getElementById('full-view');
         const progressBar = document.getElementById('read-progress');
 
@@ -757,7 +777,7 @@
             progressBar.style.width = scrollPercentage + '%';
         });
 
-        // Fire Application
+        // Initialize execution setup
         initApp();
     </script>
 </body>
